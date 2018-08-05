@@ -1,1 +1,3 @@
 /data
+/utils
+!/utils/generate_map.py
