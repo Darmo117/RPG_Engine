@@ -1,7 +1,8 @@
 # http://programarcadegames.com/python_examples/en/sprite_sheets/
 import pygame
 
-from engine import player as ply, constants, game_map as gmap
+from engine import constants, game_map as gmap
+from engine.entities import player as ply
 
 
 def main():

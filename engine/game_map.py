@@ -3,11 +3,11 @@ import typing as typ
 
 import pygame
 
-from engine import blocks, player as ply, constants
+from engine import blocks, constants, entities
 
 
 class Map:
-    def __init__(self, file: str, player: ply.Player):
+    def __init__(self, file: str, player: entities.Player):
         self._player = player
         self._player.current_level = self
 
