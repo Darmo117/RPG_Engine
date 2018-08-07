@@ -1,16 +1,20 @@
 # http://programarcadegames.com/python_examples/en/sprite_sheets/
+import sys
+
 import pygame
 
 from engine import constants, game_map, entities, tileset
 
 
 def main():
-    pygame.init()
-
     screen = pygame.display.set_mode((constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT))
     pygame.display.set_caption("RPG Engine")
 
-    tileset.load_textures()
+    try:
+        tileset.load_textures()
+    except ValueError as e:
+        print(e)
+        return 1
 
     player_data = entities.PlayerData()
     current_map = game_map.Map("test.map", player_data)
@@ -39,8 +43,12 @@ def main():
             current_map = game_map.Map(next_map, player_data)
         clock.tick(60)
         pygame.display.flip()
-    pygame.quit()
+
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    pygame.init()
+    error = main()
+    pygame.quit()
+    sys.exit(error)

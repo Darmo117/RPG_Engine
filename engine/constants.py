@@ -8,3 +8,4 @@ SCREEN_HEIGHT = 608
 MAPS_DIR = "data/maps"
 SPRITES_DIR = "data/sprites"
 TILESETS_DIR = "data/tilesets"
+TILESETS_INDEX_FILE = "tilesets.txt"
