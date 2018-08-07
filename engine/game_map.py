@@ -15,23 +15,32 @@ class Map:
 
         with open(os.path.join(constants.MAPS_DIR, file), "rb") as f:
             raw_data = pickle.load(f)
-        width = int(raw_data["width"])
-        height = int(raw_data["height"])
+        width, height = raw_data["size"]
         self._background_color = raw_data["background_color"]
-        self._player.set_position(int(raw_data["start_x"]), int(raw_data["start_y"]))
+        self._player.set_position(*raw_data["start"])
         self._rect = pygame.Rect(0, 0, width * constants.SCREEN_TILE_SIZE, height * constants.SCREEN_TILE_SIZE)
 
-        self._walls = raw_data["walls"]
+        def load_layer(group, layer_name):
+            layers = raw_data["layers"]
+            if layer_name in layers:
+                for y in range(height):
+                    for x in range(width):
+                        if layers[layer_name][y][x] is not None:
+                            tile_index, tileset = layers[layer_name][y][x]
+                            tile = tiles.Tile(x, y, tile_index, tileset)
+                            if tile is not None:
+                                group.add(tile)
+
         self._background_tiles_list = pygame.sprite.Group()
-        self._floor_tiles_list = pygame.sprite.Group()
-        self._tiles_list = pygame.sprite.Group()
-        for y in range(height):
-            for x in range(width):
-                tile_index, tileset = raw_data["main_layer"][y][x]
-                tile = tiles.Tile(x, y, tile_index, tileset)
-                if tile is not None:
-                    self._tiles_list.add(tile)
+        load_layer(self._background_tiles_list, "bg")
+        self._background2_tiles_list = pygame.sprite.Group()
+        load_layer(self._background2_tiles_list, "bg2")
+        self._main_tiles_list = pygame.sprite.Group()
+        load_layer(self._main_tiles_list, "main")
         self._foreground_tiles_list = pygame.sprite.Group()
+        load_layer(self._foreground_tiles_list, "fg")
+
+        self._walls = raw_data["walls"]
 
         self._entities_list = pygame.sprite.Group()
         self._player_list = pygame.sprite.Group()
@@ -56,7 +65,6 @@ class Map:
 
     def update(self) -> typ.Optional[str]:
         """Updates this Map. May return a Map to load."""
-        self._tiles_list.update()
         self._entities_list.update()
         self._player_list.update()
 
@@ -92,23 +100,29 @@ class Map:
 
     def draw(self, screen):
         screen.fill(self._background_color)
-        self._tiles_list.draw(screen)
+        self._background_tiles_list.draw(screen)
+        self._background2_tiles_list.draw(screen)
+        self._main_tiles_list.draw(screen)
         self._entities_list.draw(screen)
         self._player_list.draw(screen)
+        self._foreground_tiles_list.draw(screen)
 
     def translate(self, tx, ty, player=False):
         self._rect.x += tx
         self._rect.y += ty
 
-        for block in self._tiles_list:
-            block.translate(tx, ty)
+        def translate_sprites(group):
+            for element in group:
+                element.translate(tx, ty)
 
-        for entity in self._entities_list:
-            entity.translate(tx, ty)
+        translate_sprites(self._background_tiles_list)
+        translate_sprites(self._background2_tiles_list)
+        translate_sprites(self._main_tiles_list)
+        translate_sprites(self._foreground_tiles_list)
+        translate_sprites(self._entities_list)
 
         if player:
-            for player in self._player_list:
-                player.translate(tx, ty)
+            translate_sprites(self._player_list)
 
     def can_go(self, x: int, y: int) -> bool:
         """Checks if it is possible to go to a specific tile."""
