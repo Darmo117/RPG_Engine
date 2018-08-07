@@ -1,19 +1,19 @@
 # http://programarcadegames.com/python_examples/en/sprite_sheets/
 import pygame
 
-from engine import constants, game_map as gmap
-from engine.entities import player as ply
+from engine import constants, game_map, entities, tileset
 
 
 def main():
     pygame.init()
 
     screen = pygame.display.set_mode((constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT))
-    pygame.display.set_caption("SMB")
+    pygame.display.set_caption("RPG Engine")
 
-    player = ply.Player()
-    current_map = gmap.Map("data/maps/test.map", player)
-    current_map.translate(0, -constants.SCREEN_TILE_SIZE // 2)
+    tileset.load_textures()
+
+    player_data = entities.PlayerData()
+    current_map = game_map.Map("test.map", player_data)
 
     clock = pygame.time.Clock()
 
@@ -23,20 +23,20 @@ def main():
             if event.type == pygame.QUIT:
                 done = True
                 break
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP:
-                    player.go_up()
-                elif event.key == pygame.K_DOWN:
-                    player.go_down()
-                elif event.key == pygame.K_LEFT:
-                    player.go_left()
-                elif event.key == pygame.K_RIGHT:
-                    player.go_right()
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_UP]:
+            current_map.player.go_up()
+        elif keys[pygame.K_DOWN]:
+            current_map.player.go_down()
+        if keys[pygame.K_LEFT]:
+            current_map.player.go_left()
+        elif keys[pygame.K_RIGHT]:
+            current_map.player.go_right()
 
-        next_level = current_map.update()
+        next_map = current_map.update()
         current_map.draw(screen)
-        if next_level is not None:
-            current_map = current_map.Level(next_level, player)
+        if next_map is not None:
+            current_map = game_map.Map(next_map, player_data)
         clock.tick(60)
         pygame.display.flip()
     pygame.quit()
