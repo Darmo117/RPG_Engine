@@ -79,7 +79,8 @@ def _run():
     return 0
 
 
-if __name__ == "__main__":
+# noinspection PyShadowingNames
+def run():
     pygame.init()
     try:
         _run()
@@ -95,4 +96,9 @@ if __name__ == "__main__":
             f.write(message)
         error = 1
     pygame.quit()
+    return error
+
+
+if __name__ == "__main__":
+    error = run()
     sys.exit(error)
