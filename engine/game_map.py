@@ -10,10 +10,9 @@ from engine import tiles, global_values as gv, entities, sprite
 
 
 class Map:
-    def __init__(self, name: str, player_data: entities.PlayerData, start_door_id: int = None):
+    def __init__(self, name: str, start_door_id: int = None):
         self._player = entities.Player("Character", self)
         self._player.map = self
-        self._player_data = player_data
 
         with open(os.path.join(gv.MAPS_DIR, name + ".map"), "rb") as f:
             raw_data = pickle.load(f)

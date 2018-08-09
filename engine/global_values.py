@@ -1,4 +1,4 @@
-from engine import texture_manager as tm, config, i18n
+from engine import texture_manager as tm, config, i18n, entities
 
 SCALE = 1
 TILE_SIZE = 32
@@ -20,3 +20,5 @@ LOG_DIR = "logs"
 CONFIG: config.Config = None
 TEXTURE_MANAGER: tm.TexturesManager = None
 I18N: i18n.I18n = None
+
+PLAYER_DATA: entities.PlayerData = None
