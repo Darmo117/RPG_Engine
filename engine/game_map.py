@@ -1,24 +1,27 @@
 import os
 import pickle
+import time
 import typing as typ
 
 import pygame
+import pygame.sprite as psp
 
-from engine import tiles, constants, entities
+from engine import tiles, global_values as gv, entities, sprite
 
 
 class Map:
-    def __init__(self, file: str, player_data: entities.PlayerData):
+    def __init__(self, name: str, player_data: entities.PlayerData, start_door_id: int = None):
         self._player = entities.Player("Character", self)
         self._player.map = self
         self._player_data = player_data
 
-        with open(os.path.join(constants.MAPS_DIR, file), "rb") as f:
+        with open(os.path.join(gv.MAPS_DIR, name + ".map"), "rb") as f:
             raw_data = pickle.load(f)
-        width, height = raw_data["size"]
+        width, height = map(int, raw_data["size"])
         self._background_color = raw_data["background_color"]
-        self._player.set_position(*raw_data["start"])
-        self._rect = pygame.Rect(0, 0, width * constants.SCREEN_TILE_SIZE, height * constants.SCREEN_TILE_SIZE)
+        if start_door_id is None:
+            self._player.set_position(*raw_data["start"])
+        self._rect = pygame.Rect(0, 0, width * gv.SCREEN_TILE_SIZE, height * gv.SCREEN_TILE_SIZE)
 
         def load_layer(group, layer_name):
             layers = raw_data["layers"]
@@ -27,75 +30,99 @@ class Map:
                     for x in range(width):
                         if layers[layer_name][y][x] is not None:
                             tile_index, tileset = layers[layer_name][y][x]
-                            tile = tiles.Tile(x, y, tile_index, tileset)
+                            tile = tiles.Tile(x, y, int(tile_index), int(tileset))
                             if tile is not None:
                                 group.add(tile)
 
-        self._background_tiles_list = pygame.sprite.Group()
+        self._background_tiles_list = psp.Group()
         load_layer(self._background_tiles_list, "bg")
-        self._background2_tiles_list = pygame.sprite.Group()
+        self._background2_tiles_list = psp.Group()
         load_layer(self._background2_tiles_list, "bg2")
-        self._main_tiles_list = pygame.sprite.Group()
+        self._main_tiles_list = psp.Group()
         load_layer(self._main_tiles_list, "main")
-        self._foreground_tiles_list = pygame.sprite.Group()
+        self._foreground_tiles_list = psp.Group()
         load_layer(self._foreground_tiles_list, "fg")
 
         self._walls = raw_data["walls"]
+        self._doors = {}
+        for door in raw_data["doors"]:
+            ident = door["id"]
+            pos = door["position"]
+            dest = door["destination"]
+            if dest is not None:
+                self._doors[pos] = tiles.Door(ident, pos[0], pos[1], door["state"], destination_map=dest["map"],
+                                              destination_door_id=dest["door"])
+            else:
+                self._doors[pos] = tiles.Door(ident, pos[0], pos[1], door["state"])
+            if start_door_id == ident:
+                self._player.set_position(*self._doors[pos].position)
 
-        self._entities_list = pygame.sprite.Group()
-        self._player_list = pygame.sprite.Group()
+        self._entities_list = psp.Group()
+        self._player_list = psp.Group()
         self._player_list.add(self._player)
 
-        if self._rect.width < constants.SCREEN_WIDTH:
-            self.translate((constants.SCREEN_WIDTH - self._rect.width) // 2, 0, player=True)
-        if self._rect.height < constants.SCREEN_HEIGHT:
-            self.translate(0, (constants.SCREEN_HEIGHT - self._rect.height) // 2, player=True)
+        if self._rect.width < gv.SCREEN_WIDTH:
+            self.translate((gv.SCREEN_WIDTH - self._rect.width) // 2, 0, player=True)
+        if self._rect.height < gv.SCREEN_HEIGHT:
+            self.translate(0, (gv.SCREEN_HEIGHT - self._rect.height) // 2, player=True)
+
+        self._title_label = MapTitleLabel(gv.I18N.map(name), 6, 12)
+        self._title_list = psp.Group()
+        self._title_list.add(self._title_label)
 
     @property
-    def shift_x(self):
+    def shift_x(self) -> int:
         return self._rect.x
 
     @property
-    def shift_y(self):
+    def shift_y(self) -> int:
         return self._rect.y
 
     @property
-    def player(self):
+    def player(self) -> entities.Player:
         return self._player
 
-    def update(self) -> typ.Optional[str]:
+    def update(self) -> typ.Optional[tiles.Door]:
         """Updates this Map. May return a Map to load."""
         self._entities_list.update()
+        previous_player_pos = self._player.tile_position
         self._player_list.update()
 
         if self._rect.top < 0:
-            top_limit = (constants.SCREEN_HEIGHT - constants.SCREEN_TILE_SIZE) // 2
+            top_limit = (gv.SCREEN_HEIGHT - gv.SCREEN_TILE_SIZE) // 2
             if self._player.top < top_limit:
                 diff = top_limit - self._player.top
                 self._player.top = top_limit
                 self.translate(0, diff)
 
-        if self._rect.bottom > constants.SCREEN_HEIGHT:
-            bottom_limit = (constants.SCREEN_HEIGHT + constants.SCREEN_TILE_SIZE) // 2
+        if self._rect.bottom > gv.SCREEN_HEIGHT:
+            bottom_limit = (gv.SCREEN_HEIGHT + gv.SCREEN_TILE_SIZE) // 2
             if self._player.bottom > bottom_limit:
                 diff = self._player.bottom - bottom_limit
                 self._player.bottom = bottom_limit
                 self.translate(0, -diff)
 
         if self._rect.left < 0:
-            left_limit = (constants.SCREEN_WIDTH - constants.SCREEN_TILE_SIZE) // 2
+            left_limit = (gv.SCREEN_WIDTH - gv.SCREEN_TILE_SIZE) // 2
             if self._player.left < left_limit:
                 diff = left_limit - self._player.left
                 self._player.left = left_limit
                 self.translate(diff, 0)
 
-        if self._rect.right > constants.SCREEN_WIDTH:
-            right_limit = (constants.SCREEN_WIDTH + constants.SCREEN_TILE_SIZE) // 2
+        if self._rect.right > gv.SCREEN_WIDTH:
+            right_limit = (gv.SCREEN_WIDTH + gv.SCREEN_TILE_SIZE) // 2
             if self._player.right > right_limit:
                 diff = self._player.right - right_limit
                 self._player.right = right_limit
                 self.translate(-diff, 0)
 
+        self._title_list.update()
+
+        player_pos = self._player.tile_position
+        if previous_player_pos != player_pos and player_pos in self._doors:
+            door = self._doors[player_pos]
+            if door.open:
+                return door
         return None
 
     def draw(self, screen):
@@ -107,7 +134,10 @@ class Map:
         self._player_list.draw(screen)
         self._foreground_tiles_list.draw(screen)
 
-    def translate(self, tx, ty, player=False):
+        if self._title_label.show:
+            self._title_list.draw(screen)
+
+    def translate(self, tx: int, ty: int, player: bool = False):
         self._rect.x += tx
         self._rect.y += ty
 
@@ -127,8 +157,38 @@ class Map:
     def can_go(self, x: int, y: int) -> bool:
         """Checks if it is possible to go to a specific tile."""
         try:
-            return 0 <= x < self._rect.width // constants.SCREEN_TILE_SIZE \
-                   and 0 <= y < self._rect.height // constants.SCREEN_TILE_SIZE \
+            return 0 <= x < self._rect.width // gv.SCREEN_TILE_SIZE \
+                   and 0 <= y < self._rect.height // gv.SCREEN_TILE_SIZE \
                    and self._walls[y][x] == 0
         except IndexError:
             return False
+
+
+class MapTitleLabel(sprite.Sprite):
+    def __init__(self, title: str, x: int, y: int):
+        label = gv.TEXTURE_MANAGER.font.render(title, 1, (255, 255, 255))
+        alpha = 128
+        w = label.get_rect().width
+        h = label.get_rect().height
+        gradient_width = 30
+        image = pygame.Surface((label.get_rect().width, label.get_rect().height), pygame.SRCALPHA, 32)
+        image.fill((0, 0, 0, alpha))
+        image.blit(label, (0, 0))
+        full_image = pygame.Surface((w + 2 * gradient_width, h), pygame.SRCALPHA, 32)
+        gv.TEXTURE_MANAGER.alpha_gradient(full_image, (0, 0, 0), 0, alpha, rect=pygame.Rect(0, 0, gradient_width, h))
+        gv.TEXTURE_MANAGER.alpha_gradient(full_image, (0, 0, 0), alpha, 0,
+                                          rect=pygame.Rect(w + gradient_width, 0, gradient_width, h))
+        full_image.blit(image, (gradient_width, 0))
+        super().__init__(x, y, full_image)
+        self._title_timer = None
+        self._show = False
+
+    def update(self):
+        if self._title_timer is None:
+            self._title_timer = time.time()
+        else:
+            self._show = 0.5 <= time.time() - self._title_timer <= 3
+
+    @property
+    def show(self) -> bool:
+        return self._show

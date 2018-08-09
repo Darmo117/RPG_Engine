@@ -1,9 +1,9 @@
 import time
 
-from engine import sprite as sp, tileset as ts, constants
+from engine import sprite as sp, global_values as gv
 
 
-class Player(sp.Sprite):
+class Player(sp.TileSprite):
     """This class represents the player entity. The player is created each time a level is loaded."""
 
     UP = (0, -1)
@@ -22,15 +22,15 @@ class Player(sp.Sprite):
 
         self._map = current_map
 
-        size = constants.SCREEN_TILE_SIZE
+        size = gv.SCREEN_TILE_SIZE
         self._frames = {}
         self._idle_frames = {}
         for i, side in enumerate([self.DOWN, self.LEFT, self.RIGHT, self.UP]):
             self._frames[side] = [
-                ts.get_sprite(3 * i, size, size, sprite_sheet),
-                ts.get_sprite(2 + 3 * i, size, size, sprite_sheet)
+                gv.TEXTURE_MANAGER.get_sprite(3 * i, size, size, sprite_sheet),
+                gv.TEXTURE_MANAGER.get_sprite(2 + 3 * i, size, size, sprite_sheet)
             ]
-            self._idle_frames[side] = ts.get_sprite(1 + 3 * i, size, size, sprite_sheet)
+            self._idle_frames[side] = gv.TEXTURE_MANAGER.get_sprite(1 + 3 * i, size, size, sprite_sheet)
 
         self._animation_index = 0
         self._animation_timer = time.time()
@@ -83,8 +83,8 @@ class Player(sp.Sprite):
         self._map = value
 
     def set_position(self, x: int, y: int):
-        self._rect.x = x * constants.SCREEN_TILE_SIZE
-        self._rect.y = y * constants.SCREEN_TILE_SIZE
+        self._rect.x = x * gv.SCREEN_TILE_SIZE
+        self._rect.y = y * gv.SCREEN_TILE_SIZE
         self._update_image()
         self._tile_x = x
         self._tile_y = y
@@ -98,11 +98,11 @@ class Player(sp.Sprite):
 
         if self._remaining_x == 0:
             actual_x = self._rect.x - self._map.shift_x
-            if actual_x % constants.SCREEN_TILE_SIZE != 0:
-                offset = actual_x % constants.SCREEN_TILE_SIZE
-                adjust = offset - (constants.SCREEN_TILE_SIZE if self._direction[0] < 0 else 0)
+            if actual_x % gv.SCREEN_TILE_SIZE != 0:
+                offset = actual_x % gv.SCREEN_TILE_SIZE
+                adjust = offset - (gv.SCREEN_TILE_SIZE if self._direction[0] < 0 else 0)
                 self._rect.x -= adjust
-            self._tile_x = (self._rect.x - self._map.shift_x) // constants.SCREEN_TILE_SIZE
+            self._tile_x = (self._rect.x - self._map.shift_x) // gv.SCREEN_TILE_SIZE
 
         if self._remaining_y > 0:
             self._rect.y += self._speed * self._direction[1]
@@ -112,11 +112,11 @@ class Player(sp.Sprite):
 
         if self._remaining_y == 0:
             actual_y = self._rect.y - self._map.shift_y
-            if actual_y % constants.SCREEN_TILE_SIZE != 0:
-                offset = actual_y % constants.SCREEN_TILE_SIZE
-                adjust = offset - (constants.SCREEN_TILE_SIZE if self._direction[1] < 0 else 0)
+            if actual_y % gv.SCREEN_TILE_SIZE != 0:
+                offset = actual_y % gv.SCREEN_TILE_SIZE
+                adjust = offset - (gv.SCREEN_TILE_SIZE if self._direction[1] < 0 else 0)
                 self._rect.y -= adjust
-            self._tile_y = (self._rect.y - self._map.shift_y) // constants.SCREEN_TILE_SIZE
+            self._tile_y = (self._rect.y - self._map.shift_y) // gv.SCREEN_TILE_SIZE
 
         if self.is_moving():
             current_time = time.time()
@@ -147,8 +147,8 @@ class Player(sp.Sprite):
         if self._remaining_x == 0 and self._remaining_y == 0:
             self._direction = tx, ty
             if can_go:
-                self._remaining_x = abs(tx) * constants.SCREEN_TILE_SIZE
-                self._remaining_y = abs(ty) * constants.SCREEN_TILE_SIZE
+                self._remaining_x = abs(tx) * gv.SCREEN_TILE_SIZE
+                self._remaining_y = abs(ty) * gv.SCREEN_TILE_SIZE
         self._update_image()
 
     def _update_image(self):

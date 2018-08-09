@@ -1,3 +1,4 @@
 /data
+/logs
 /utils
 !/utils/generate_map.py

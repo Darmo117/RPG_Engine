@@ -1,6 +1,6 @@
-from engine import sprite, tileset as ts
+from engine import sprite, global_values as gv
 
 
-class Tile(sprite.Sprite):
-    def __init__(self, x, y, texture_index, tileset):
-        super().__init__(x, y, ts.get_tile(texture_index, tileset))
+class Tile(sprite.TileSprite):
+    def __init__(self, tile_x, tile_y, texture_index, tileset):
+        super().__init__(tile_x, tile_y, gv.TEXTURE_MANAGER.get_tile(texture_index, tileset))
