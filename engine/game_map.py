@@ -6,7 +6,7 @@ import typing as typ
 import pygame
 import pygame.sprite as psp
 
-from engine import tiles, global_values as gv, entities, sprite
+from engine import tiles, global_values as gv, entities, menus
 
 
 class Map:
@@ -65,9 +65,7 @@ class Map:
         if self._rect.height < gv.SCREEN_HEIGHT:
             self.translate(0, (gv.SCREEN_HEIGHT - self._rect.height) // 2, player=True)
 
-        self._title_label = MapTitleLabel(gv.I18N.map(name), 6, 12)
-        self._title_list = psp.Group()
-        self._title_list.add(self._title_label)
+        self._title_label = _MapTitleLabel(gv.I18N.map(name))
 
     @property
     def shift_x(self) -> int:
@@ -86,7 +84,30 @@ class Map:
         self._entities_list.update()
         previous_player_pos = self._player.tile_position
         self._player_list.update()
+        self._title_label.update()
 
+        self._events()
+        self._translate_screen()
+
+        player_pos = self._player.tile_position
+        if previous_player_pos != player_pos and player_pos in self._doors:
+            door = self._doors[player_pos]
+            if door.open:
+                return door
+        return None
+
+    def _events(self):
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_UP]:
+            self._player.go_up()
+        elif keys[pygame.K_DOWN]:
+            self._player.go_down()
+        if keys[pygame.K_LEFT]:
+            self._player.go_left()
+        elif keys[pygame.K_RIGHT]:
+            self._player.go_right()
+
+    def _translate_screen(self):
         if self._rect.top < 0:
             top_limit = (gv.SCREEN_HEIGHT - gv.SCREEN_TILE_SIZE) // 2
             if self._player.top < top_limit:
@@ -115,15 +136,6 @@ class Map:
                 self._player.right = right_limit
                 self.translate(-diff, 0)
 
-        self._title_list.update()
-
-        player_pos = self._player.tile_position
-        if previous_player_pos != player_pos and player_pos in self._doors:
-            door = self._doors[player_pos]
-            if door.open:
-                return door
-        return None
-
     def draw(self, screen):
         screen.fill(self._background_color)
         self._background_tiles_list.draw(screen)
@@ -133,8 +145,8 @@ class Map:
         self._player_list.draw(screen)
         self._foreground_tiles_list.draw(screen)
 
-        if self._title_label.show:
-            self._title_list.draw(screen)
+        if self._title_label.visible:
+            self._title_label.draw(screen, (6, 12))
 
     def translate(self, tx: int, ty: int, player: bool = False):
         self._rect.x += tx
@@ -163,31 +175,42 @@ class Map:
             return False
 
 
-class MapTitleLabel(sprite.Sprite):
-    def __init__(self, title: str, x: int, y: int):
-        label = gv.TEXTURE_MANAGER.font.render(title, 1, (255, 255, 255))
-        alpha = 128
-        w = label.get_rect().width
-        h = label.get_rect().height
-        gradient_width = 30
-        image = pygame.Surface((label.get_rect().width, label.get_rect().height), pygame.SRCALPHA, 32)
-        image.fill((0, 0, 0, alpha))
-        image.blit(label, (0, 0))
-        full_image = pygame.Surface((w + 2 * gradient_width, h), pygame.SRCALPHA, 32)
-        gv.TEXTURE_MANAGER.alpha_gradient(full_image, (0, 0, 0), 0, alpha, rect=pygame.Rect(0, 0, gradient_width, h))
-        gv.TEXTURE_MANAGER.alpha_gradient(full_image, (0, 0, 0), alpha, 0,
-                                          rect=pygame.Rect(w + gradient_width, 0, gradient_width, h))
-        full_image.blit(image, (gradient_width, 0))
-        super().__init__(x, y, full_image)
+class _MapTitleLabel(menus.Component):
+    def __init__(self, title: str):
+        super().__init__(padding=0)
+        self._label = gv.TEXTURE_MANAGER.render_text(title)
+        self._gradient_width = 30
         self._title_timer = None
-        self._show = False
+        self._visible = False
+        self._update_image()
+
+    @property
+    def visible(self) -> bool:
+        return self._visible
+
+    @property
+    def size(self) -> typ.Tuple[int, int]:
+        return 2 * self._gradient_width + self._label.get_rect().width, self._label.get_rect().height
 
     def update(self):
         if self._title_timer is None:
             self._title_timer = time.time()
         else:
-            self._show = 0.5 <= time.time() - self._title_timer <= 3
+            self._visible = 0.5 <= time.time() - self._title_timer <= 3
 
-    @property
-    def show(self) -> bool:
-        return self._show
+    def _get_image(self) -> pygame.Surface:
+        return self._image
+
+    def _update_image(self):
+        alpha = 128
+        text = pygame.Surface(self._label.get_rect().size, pygame.SRCALPHA, 32)
+        text.fill((0, 0, 0, alpha))
+        text.blit(self._label, (0, 0))
+
+        w, h = self._label.get_rect().size
+        self._image = pygame.Surface((w + 2 * self._gradient_width, h), pygame.SRCALPHA, 32)
+        gv.TEXTURE_MANAGER.alpha_gradient(self._image, (0, 0, 0), 0, alpha,
+                                          rect=pygame.Rect(0, 0, self._gradient_width, h))
+        gv.TEXTURE_MANAGER.alpha_gradient(self._image, (0, 0, 0), alpha, 0,
+                                          rect=pygame.Rect(w + self._gradient_width, 0, self._gradient_width, h))
+        self._image.blit(text, (self._gradient_width, 0))

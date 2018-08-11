@@ -1,5 +1,6 @@
 import configparser as cp
 import datetime
+import functools as ft
 import logging
 import os
 import sys
@@ -7,107 +8,131 @@ import traceback
 
 import pygame
 
-from engine import global_values as gv, game_map, entities, texture_manager as tl, config, i18n
-
-_LOGGER = logging.getLogger(__name__)
+from engine import global_values as gv, game_map, entities, texture_manager as tl, config, i18n, menus
 
 
-def _init_config():
-    parser = cp.ConfigParser()
-    # noinspection PyShadowingNames
-    with open(gv.GAME_INIT_FILE, encoding="UTF-8") as f:
-        parser.read_file(f)
-    cfg = dict(parser["Game"])
-    if "languages" in cfg:
-        cfg["languages"] = cfg["languages"].split("|")
-    if "debug" in cfg:
-        if cfg["debug"] == "true":
-            v = True
-        elif cfg["debug"] == "false":
-            v = False
-        else:
-            raise ValueError(f"'{cfg['debug']}' cannot be converted to boolean!")
-        cfg["debug"] = v
-    gv.CONFIG = config.Config(**cfg)
+class GameEngine:
+    _LOGGER = logging.getLogger(__name__ + ".GameEngine")
 
+    TITLE = 0
+    LEVEL = 1
+    INVENTORY = 2
 
-def _run():
-    _init_config()
+    def __init__(self):
+        parser = cp.ConfigParser()
+        with open(gv.GAME_INIT_FILE, encoding="UTF-8") as f:
+            parser.read_file(f)
+        cfg = dict(parser["Game"])
+        if "languages" in cfg:
+            cfg["languages"] = cfg["languages"].split("|")
+        if "debug" in cfg:
+            if cfg["debug"] == "true":
+                v = True
+            elif cfg["debug"] == "false":
+                v = False
+            else:
+                raise ValueError(f"'{cfg['debug']}' cannot be converted to boolean!")
+            cfg["debug"] = v
+        gv.CONFIG = config.Config(**cfg)
 
-    logging_level = logging.INFO
-    if gv.CONFIG.debug:
-        logging_level = logging.DEBUG
-    logging.basicConfig(stream=sys.stdout, level=logging_level,
-                        format="%(asctime)s (%(name)s) [%(levelname)s] %(message)s")
-    _LOGGER.debug(f"Config: {gv.CONFIG}")
-    screen = pygame.display.set_mode((gv.SCREEN_WIDTH, gv.SCREEN_HEIGHT))
-    pygame.display.set_caption(gv.CONFIG.title)
+        self._state = self.TITLE
+        self._current_map = None
 
-    gv.TEXTURE_MANAGER = tl.TexturesManager(pygame.font.SysFont("Tahoma", 15))
-    gv.CONFIG.language_index = 1  # TEMP
-    gv.I18N = i18n.I18n(gv.CONFIG.language_index)
-    gv.PLAYER_DATA = entities.PlayerData()
+    @property
+    def state(self) -> int:
+        return self._state
 
-    _loop(screen)
+    @state.setter
+    def state(self, value: int):
+        if value not in [self.TITLE, self.LEVEL, self.INVENTORY]:
+            raise ValueError(f"Illegal state '{value}!'")
+        self._state = value
 
-    return 0
+    @property
+    def current_map(self):
+        return self._current_map
 
+    @current_map.setter
+    def current_map(self, value: game_map.Map):
+        self._current_map = value
 
-def _loop(screen):
-    current_map = game_map.Map(gv.CONFIG.start_map)
-    clock = pygame.time.Clock()
-    done = False
-    while not done:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                done = True
-                break
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_UP]:
-            current_map.player.go_up()
-        elif keys[pygame.K_DOWN]:
-            current_map.player.go_down()
-        if keys[pygame.K_LEFT]:
-            current_map.player.go_left()
-        elif keys[pygame.K_RIGHT]:
-            current_map.player.go_right()
+    def run(self) -> int:
+        """
+        Runs the game engine.
 
-        door = current_map.update()
-        current_map.draw(screen)
-        if door is not None:
-            current_map = game_map.Map(door.destination_map, start_door_id=door.id)
-        clock.tick(60)
-        pygame.display.flip()
+        :return: An error code; 0 if engine terminated normally.
+        """
+        pygame.init()
 
+        try:
+            self._run()
+            error = 0
+        except BaseException as e:
+            name = type(e).__name__
+            tb = "".join(traceback.format_tb(e.__traceback__))
+            message = f"{name}: {e}\n{tb}"
+            self._LOGGER.error(message)
+            date = datetime.datetime.now().replace(microsecond=0)
+            crash_date = str(date).replace(" ", "_").replace(":", "-")
+            with open(os.path.join(gv.LOG_DIR, f"crash_report_{crash_date}.log"), mode="w", encoding="UTF-8") as f:
+                f.write(message)
+            error = 1
 
-# noinspection PyShadowingNames
-def run() -> int:
-    """
-    Runs the game engine.
+        pygame.quit()
 
-    :return: An error code; 0 if engine terminated normally.
-    """
-    pygame.init()
+        return error
 
-    try:
-        _run()
-        error = 0
-    except BaseException as e:
-        name = type(e).__name__
-        tb = "".join(traceback.format_tb(e.__traceback__))
-        message = f"{name}: {e}\n{tb}"
-        _LOGGER.error(message)
-        date = datetime.datetime.now().replace(microsecond=0)
-        crash_date = str(date).replace(" ", "_").replace(":", "-")
-        with open(os.path.join(gv.LOG_DIR, f"crash_report_{crash_date}.log"), mode="w", encoding="UTF-8") as f:
-            f.write(message)
-        error = 1
+    def _run(self):
+        logging_level = logging.INFO
+        if gv.CONFIG.debug:
+            logging_level = logging.DEBUG
+        logging.basicConfig(stream=sys.stdout, level=logging_level,
+                            format="%(asctime)s (%(name)s) [%(levelname)s] %(message)s")
+        self._LOGGER.debug(f"Config: {gv.CONFIG}")
+        screen = pygame.display.set_mode((gv.SCREEN_WIDTH, gv.SCREEN_HEIGHT))
+        pygame.display.set_caption(gv.CONFIG.title)
 
-    pygame.quit()
+        gv.TEXTURE_MANAGER = tl.TexturesManager(pygame.font.SysFont("Tahoma", 15))
+        gv.PLAYER_DATA = entities.PlayerData()
 
-    return error
+        self._loop(screen)
+
+        return 0
+
+    def _loop(self, screen):
+        def on_language_selected(engine, index):
+            gv.CONFIG.language_index = index
+            gv.I18N = i18n.I18n(gv.CONFIG.language_index)
+            engine.state = self.LEVEL
+            engine.current_map = game_map.Map(gv.CONFIG.start_map)
+
+        # noinspection PyTypeChecker
+        title_screen = menus.TitleScreen(on_language_selected=ft.partial(on_language_selected, self))
+
+        clock = pygame.time.Clock()
+        done = False
+        while not done:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    done = True
+                    break
+                if self._state == self.TITLE:
+                    title_screen.on_event(event)
+
+            if self._state == self.TITLE:
+                title_screen.update()
+                title_screen.draw(screen)
+            elif self._state == self.LEVEL:
+                door = self._current_map.update()
+                self._current_map.draw(screen)
+                if door is not None:
+                    self._current_map = game_map.Map(door.destination_map, start_door_id=door.id)
+            elif self._state == self.INVENTORY:
+                pass  # TODO
+
+            clock.tick(60)
+            pygame.display.flip()
 
 
 if __name__ == "__main__":
-    error = run()
-    sys.exit(error)
+    sys.exit(GameEngine().run())

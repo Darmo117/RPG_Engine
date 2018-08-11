@@ -22,15 +22,15 @@ class Player(sp.TileSprite):
 
         self._map = current_map
 
-        size = gv.SCREEN_TILE_SIZE
+        size = (gv.SCREEN_TILE_SIZE, gv.SCREEN_TILE_SIZE)
         self._frames = {}
         self._idle_frames = {}
         for i, side in enumerate([self.DOWN, self.LEFT, self.RIGHT, self.UP]):
             self._frames[side] = [
-                gv.TEXTURE_MANAGER.get_sprite(3 * i, size, size, sprite_sheet),
-                gv.TEXTURE_MANAGER.get_sprite(2 + 3 * i, size, size, sprite_sheet)
+                gv.TEXTURE_MANAGER.get_sprite(3 * i, size, sprite_sheet),
+                gv.TEXTURE_MANAGER.get_sprite(2 + 3 * i, size, sprite_sheet)
             ]
-            self._idle_frames[side] = gv.TEXTURE_MANAGER.get_sprite(1 + 3 * i, size, size, sprite_sheet)
+            self._idle_frames[side] = gv.TEXTURE_MANAGER.get_sprite(1 + 3 * i, size, sprite_sheet)
 
         self._animation_index = 0
         self._animation_timer = time.time()

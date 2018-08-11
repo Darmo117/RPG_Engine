@@ -7,7 +7,9 @@ SCREEN_TILE_SIZE = TILE_SIZE * SCALE
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 608
 
+BACKGROUNDS_DIR = "data/backgrounds"
 MAPS_DIR = "data/maps"
+MENUS_DIR = "data/menus"
 SPRITES_DIR = "data/sprites"
 TILESETS_DIR = "data/tilesets"
 TILESETS_INDEX_FILE = "tilesets.cfg"
