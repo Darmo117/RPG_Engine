@@ -4,7 +4,7 @@ import typing as typ
 
 import pygame
 
-from engine import menus, global_values as gv
+from engine import menus, global_values as gv, i18n, actions
 
 
 class AbstractScreen(abc.ABC):
@@ -15,12 +15,21 @@ class AbstractScreen(abc.ABC):
             self._background_image.blit(pygame.image.load(background_image), (0, 0))
         else:
             self._background_image = None
+        self._controls_enabled = True
+
+    @property
+    def controls_enabled(self) -> bool:
+        return self._controls_enabled
+
+    @controls_enabled.setter
+    def controls_enabled(self, value: bool):
+        self._controls_enabled = value
 
     def on_event(self, event):
         """Called when an input event occurs."""
         pass
 
-    def update(self):
+    def update(self) -> typ.Optional[actions.AbstractAction]:
         pass
 
     def draw(self, screen: pygame.Surface):
@@ -31,20 +40,28 @@ class AbstractScreen(abc.ABC):
 
 
 class TitleScreen(AbstractScreen):
-    def __init__(self, on_language_selected: typ.Callable[[int], None] = None):
+    def __init__(self):
         super().__init__(background_image=os.path.join(gv.BACKGROUNDS_DIR, "title_screen.png"))
         self._menu = menus.Menu(len(gv.CONFIG.languages), 1)
         for i, language in enumerate(gv.CONFIG.languages):
             self._menu.set_item((i, 0), menus.Button(language, name=str(i),
-                                                     action=lambda index: on_language_selected(int(index))))
+                                                     action=lambda index: self._on_language_selected(int(index))))
+        self._action = None
+
+    def _on_language_selected(self, index):
+        gv.CONFIG.language_index = index
+        gv.I18N = i18n.I18n(gv.CONFIG.language_index)
+        self._action = actions.LoadMapAction(gv.CONFIG.start_map)
 
     def on_event(self, event):
         super().on_event(event)
-        self._menu.on_event(event)
+        if self._controls_enabled:
+            self._menu.on_event(event)
 
-    def update(self):
+    def update(self) -> typ.Optional[actions.AbstractAction]:
         super().update()
         self._menu.update()
+        return self._action if self._controls_enabled else None
 
     def draw(self, screen: pygame.Surface):
         super().draw(screen)

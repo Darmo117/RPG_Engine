@@ -1,3 +1,4 @@
+import logging
 import os
 import pickle
 import time
@@ -6,11 +7,14 @@ import typing as typ
 import pygame
 import pygame.sprite as psp
 
-from engine import tiles, global_values as gv, entities, menus
+from engine import tiles, global_values as gv, entities, menus, actions
 
 
 class Map:
+    _LOGGER = logging.getLogger(__name__ + ".Map")
+
     def __init__(self, name: str, start_door_id: int = None):
+        self._LOGGER.debug(f"Loading map '{name}...'")
         self._player = entities.Player("Character", self)
         self._player.map = self
 
@@ -66,6 +70,8 @@ class Map:
             self.translate(0, (gv.SCREEN_HEIGHT - self._rect.height) // 2, player=True)
 
         self._title_label = _MapTitleLabel(gv.I18N.map(name))
+        self._controls_enabled = True
+        self._LOGGER.debug(f"Loaded map '{name}.'")
 
     @property
     def shift_x(self) -> int:
@@ -79,21 +85,31 @@ class Map:
     def player(self) -> entities.Player:
         return self._player
 
-    def update(self) -> typ.Optional[tiles.Door]:
+    @property
+    def controls_enabled(self) -> bool:
+        return self._controls_enabled
+
+    @controls_enabled.setter
+    def controls_enabled(self, value: bool):
+        self._controls_enabled = value
+
+    # TODO Retourner une action
+    def update(self) -> typ.Optional[actions.AbstractAction]:
         """Updates this Map. May return a Map to load."""
         self._entities_list.update()
         previous_player_pos = self._player.tile_position
         self._player_list.update()
         self._title_label.update()
 
-        self._events()
+        if self._controls_enabled:
+            self._events()
         self._translate_screen()
 
         player_pos = self._player.tile_position
         if previous_player_pos != player_pos and player_pos in self._doors:
             door = self._doors[player_pos]
-            if door.open:
-                return door
+            if self._controls_enabled and door.open:
+                return actions.LoadMapAction(door.destination_map, door_id=door.id)
         return None
 
     def _events(self):

@@ -1,22 +1,18 @@
 import configparser as cp
 import datetime
-import functools as ft
 import logging
 import os
 import sys
+import time
 import traceback
 
 import pygame
 
-from engine import global_values as gv, game_map, entities, texture_manager as tl, config, i18n, menus
+from engine import global_values as gv, game_map, entities, texture_manager as tl, config, menus, actions
 
 
 class GameEngine:
     _LOGGER = logging.getLogger(__name__ + ".GameEngine")
-
-    TITLE = 0
-    LEVEL = 1
-    INVENTORY = 2
 
     def __init__(self):
         parser = cp.ConfigParser()
@@ -35,18 +31,8 @@ class GameEngine:
             cfg["debug"] = v
         gv.CONFIG = config.Config(**cfg)
 
-        self._state = self.TITLE
         self._current_map = None
-
-    @property
-    def state(self) -> int:
-        return self._state
-
-    @state.setter
-    def state(self, value: int):
-        if value not in [self.TITLE, self.LEVEL, self.INVENTORY]:
-            raise ValueError(f"Illegal state '{value}!'")
-        self._state = value
+        self._current_screen = None
 
     @property
     def current_map(self):
@@ -55,6 +41,14 @@ class GameEngine:
     @current_map.setter
     def current_map(self, value: game_map.Map):
         self._current_map = value
+
+    @property
+    def current_screen(self) -> menus.AbstractScreen:
+        return self._current_screen
+
+    @current_screen.setter
+    def current_screen(self, value: menus.AbstractScreen):
+        self._current_screen = value
 
     def run(self) -> int:
         """
@@ -99,15 +93,10 @@ class GameEngine:
 
         return 0
 
-    def _loop(self, screen):
-        def on_language_selected(engine, index):
-            gv.CONFIG.language_index = index
-            gv.I18N = i18n.I18n(gv.CONFIG.language_index)
-            engine.state = self.LEVEL
-            engine.current_map = game_map.Map(gv.CONFIG.start_map)
+    def _loop(self, screen: pygame.Surface):
+        transition = None
 
-        # noinspection PyTypeChecker
-        title_screen = menus.TitleScreen(on_language_selected=ft.partial(on_language_selected, self))
+        self._current_screen = menus.TitleScreen()
 
         clock = pygame.time.Clock()
         done = False
@@ -116,22 +105,85 @@ class GameEngine:
                 if event.type == pygame.QUIT:
                     done = True
                     break
-                if self._state == self.TITLE:
-                    title_screen.on_event(event)
+                if self._current_screen is not None:
+                    self._current_screen.on_event(event)
 
-            if self._state == self.TITLE:
-                title_screen.update()
-                title_screen.draw(screen)
-            elif self._state == self.LEVEL:
-                door = self._current_map.update()
+            if self._current_map is not None:
+                self._current_map.controls_enabled = transition is None
+                action = self._current_map.update()
                 self._current_map.draw(screen)
-                if door is not None:
-                    self._current_map = game_map.Map(door.destination_map, start_door_id=door.id)
-            elif self._state == self.INVENTORY:
-                pass  # TODO
+                if action is not None:
+                    transition = _Transition(action)
+            if self._current_screen is not None:
+                self._current_screen.controls_enabled = transition is None
+                action = self._current_screen.update()
+                self._current_screen.draw(screen)
+                if action is not None:
+                    transition = _Transition(action)
+
+            if transition is not None:
+                transition.update(self)
+                transition.draw(screen)
+                if transition.finished:
+                    transition = None
 
             clock.tick(60)
             pygame.display.flip()
+
+
+class _Transition:
+    """This class adds a fade out/fade in effect to transitions between actions."""
+
+    FADE_IN = -1
+    FADE_OUT = 1
+
+    FADE_LENGTH = 0.5
+    FRAMES_NUMBER = 50
+    FRAMES_INTERVAL = FADE_LENGTH / FRAMES_NUMBER
+
+    def __init__(self, action: actions.AbstractAction):
+        """
+        Creates a transition.
+
+        :param action: Action to execute between fade out and fade in effects.
+        """
+        self._action = action
+        self._fade_direction = self.FADE_OUT
+        self._frame = 0
+        self._timer = 0
+        self._image = None
+        self._faded_out = False
+        self._finished = False
+
+    @property
+    def finished(self):
+        return self._finished
+
+    def update(self, engine: GameEngine):
+        if self._finished:
+            return
+
+        if self._frame == self.FRAMES_NUMBER:
+            if not self._faded_out:
+                self._faded_out = True
+                self._action.execute(engine)
+                self._fade_direction = self.FADE_IN
+                self._frame = 0
+            else:
+                self._finished = True
+
+        if time.time() - self._timer >= self.FRAMES_INTERVAL:
+            alpha = int((self._frame / self.FRAMES_NUMBER) * 255)
+            if self._fade_direction == self.FADE_IN:
+                alpha = 255 - alpha
+            # noinspection PyArgumentList
+            self._image = pygame.Surface((gv.SCREEN_WIDTH, gv.SCREEN_HEIGHT), pygame.SRCALPHA, 32).convert_alpha()
+            self._image.fill((0, 0, 0, alpha))
+            self._frame += 1
+            self._timer = time.time()
+
+    def draw(self, screen: pygame.Surface):
+        screen.blit(self._image, (0, 0))
 
 
 if __name__ == "__main__":

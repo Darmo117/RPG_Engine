@@ -1,5 +1,6 @@
 """This module defines various graphical components such as menus and buttons."""
 import abc
+import itertools as it
 import typing as typ
 
 import pygame
@@ -12,6 +13,19 @@ class Component(abc.ABC):
 
     def __init__(self, padding: int = 0):
         self._padding = padding
+        self._enabled = True
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, value: bool):
+        self._enabled = value
+        self._on_enable_changed()
+
+    def _on_enable_changed(self):
+        pass
 
     @property
     @abc.abstractmethod
@@ -55,13 +69,7 @@ class Button(Component):
     def name(self):
         return self._name
 
-    @property
-    def enabled(self) -> bool:
-        return self._enabled
-
-    @enabled.setter
-    def enabled(self, value: bool):
-        self._enabled = value
+    def _on_enable_changed(self):
         self._update_image()
 
     @property
@@ -117,6 +125,12 @@ class Menu(Component):
     @property
     def size(self) -> tp.Dimension:
         return self._size
+
+    def _on_enable_changed(self):
+        for r, c in it.product(range(self._grid_height), range(self._grid_width)):
+            button = self._grid[r][c]
+            if button is not None:
+                button.enabled = self._enabled
 
     def set_item(self, position: tp.Position, button: Button):
         if not isinstance(button, Button):
