@@ -1,36 +1,20 @@
-import abc
 import os
 import typing as typ
 
 import pygame
 
-from engine import menus, global_values as gv, i18n, actions
+from engine import menus, global_values as gv, i18n, actions, controllable
 
 
-class AbstractScreen(abc.ABC):
+class AbstractScreen(controllable.Controllable):
     def __init__(self, background_image: str = None):
+        super().__init__()
         if background_image is not None:
             # noinspection PyArgumentList
             self._background_image = pygame.Surface((gv.SCREEN_WIDTH, gv.SCREEN_HEIGHT), pygame.SRCALPHA).convert()
             self._background_image.blit(pygame.image.load(background_image), (0, 0))
         else:
             self._background_image = None
-        self._controls_enabled = True
-
-    @property
-    def controls_enabled(self) -> bool:
-        return self._controls_enabled
-
-    @controls_enabled.setter
-    def controls_enabled(self, value: bool):
-        self._controls_enabled = value
-
-    def on_event(self, event):
-        """Called when an input event occurs."""
-        pass
-
-    def update(self) -> typ.Optional[actions.AbstractAction]:
-        pass
 
     def draw(self, screen: pygame.Surface):
         if self._background_image is not None:

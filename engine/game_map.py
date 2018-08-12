@@ -7,14 +7,15 @@ import typing as typ
 import pygame
 import pygame.sprite as psp
 
-from engine import tiles, global_values as gv, entities, menus, actions
+from engine import tiles, global_values as gv, entities, menus, actions, controllable
 
 
-class Map:
+class Map(controllable.Controllable):
     _LOGGER = logging.getLogger(__name__ + ".Map")
 
     def __init__(self, name: str, start_door_id: int = None):
-        self._LOGGER.debug(f"Loading map '{name}...'")
+        super().__init__()
+        self._LOGGER.debug(f"Loading map '{name}'...")
         self._player = entities.Player("Character", self)
         self._player.map = self
 
@@ -70,8 +71,7 @@ class Map:
             self.translate(0, (gv.SCREEN_HEIGHT - self._rect.height) // 2, player=True)
 
         self._title_label = _MapTitleLabel(gv.I18N.map(name))
-        self._controls_enabled = True
-        self._LOGGER.debug(f"Loaded map '{name}.'")
+        self._LOGGER.debug(f"Loaded map '{name}'.")
 
     @property
     def shift_x(self) -> int:
@@ -85,17 +85,8 @@ class Map:
     def player(self) -> entities.Player:
         return self._player
 
-    @property
-    def controls_enabled(self) -> bool:
-        return self._controls_enabled
-
-    @controls_enabled.setter
-    def controls_enabled(self, value: bool):
-        self._controls_enabled = value
-
-    # TODO Retourner une action
     def update(self) -> typ.Optional[actions.AbstractAction]:
-        """Updates this Map. May return a Map to load."""
+        super().update()
         self._entities_list.update()
         previous_player_pos = self._player.tile_position
         self._player_list.update()
@@ -153,6 +144,7 @@ class Map:
                 self.translate(-diff, 0)
 
     def draw(self, screen):
+        super().draw(screen)
         screen.fill(self._background_color)
         self._background_tiles_list.draw(screen)
         self._background2_tiles_list.draw(screen)

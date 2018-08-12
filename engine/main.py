@@ -8,7 +8,7 @@ import traceback
 
 import pygame
 
-from engine import global_values as gv, game_map, entities, texture_manager as tl, config, menus, actions
+from engine import global_values as gv, game_map, entities, texture_manager as tl, config, menus, actions, controllable
 
 
 class GameEngine:
@@ -96,6 +96,17 @@ class GameEngine:
     def _loop(self, screen: pygame.Surface):
         transition = None
 
+        # noinspection PyShadowingNames
+        def do(c: controllable.Controllable, transition):
+            """Updates and draws a controllable component. May return a transition."""
+            if c is not None:
+                c.controls_enabled = transition is None
+                action = c.update()
+                c.draw(screen)
+                if action is not None:
+                    return _Transition(action)
+            return None
+
         self._current_screen = menus.TitleScreen()
 
         clock = pygame.time.Clock()
@@ -108,18 +119,13 @@ class GameEngine:
                 if self._current_screen is not None:
                     self._current_screen.on_event(event)
 
-            if self._current_map is not None:
-                self._current_map.controls_enabled = transition is None
-                action = self._current_map.update()
-                self._current_map.draw(screen)
-                if action is not None:
-                    transition = _Transition(action)
-            if self._current_screen is not None:
-                self._current_screen.controls_enabled = transition is None
-                action = self._current_screen.update()
-                self._current_screen.draw(screen)
-                if action is not None:
-                    transition = _Transition(action)
+            t1 = do(self._current_screen, transition)
+            t2 = do(self._current_map, transition)
+
+            if t1 is not None:
+                transition = t1
+            if t2 is not None:
+                transition = t2
 
             if transition is not None:
                 transition.update(self)
