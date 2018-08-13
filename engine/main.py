@@ -118,6 +118,8 @@ class GameEngine:
                     break
                 if self._current_screen is not None:
                     self._current_screen.on_event(event)
+                if self._current_map is not None:
+                    self._current_map.on_event(event)
 
             t1 = do(self._current_screen, transition)
             t2 = do(self._current_map, transition)
