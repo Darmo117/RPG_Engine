@@ -143,8 +143,8 @@ class _Transition:
     FADE_IN = -1
     FADE_OUT = 1
 
-    FADE_LENGTH = 0.5
-    FRAMES_NUMBER = 50
+    FADE_LENGTH = 0.2
+    FRAMES_NUMBER = 20
     FRAMES_INTERVAL = FADE_LENGTH / FRAMES_NUMBER
 
     def __init__(self, action: actions.AbstractAction):
@@ -189,7 +189,8 @@ class _Transition:
             self._timer = time.time()
 
     def draw(self, screen: pygame.Surface):
-        screen.blit(self._image, (0, 0))
+        if self._image is not None:
+            screen.blit(self._image, (0, 0))
 
 
 if __name__ == "__main__":
