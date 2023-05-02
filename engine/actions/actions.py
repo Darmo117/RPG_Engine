@@ -1,6 +1,6 @@
 import abc
 
-from engine import game_map
+from .. import game_map
 
 
 class AbstractAction(abc.ABC):

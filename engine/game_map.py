@@ -2,29 +2,28 @@ import logging
 import os
 import pickle
 import time
-import typing as typ
 
 import pygame
 import pygame.sprite as psp
 
-from engine import tiles, global_values as gv, entities, menus, actions, controllable
+from . import actions, controllable, entities, global_values as gv, menus, tiles
 
 
 class Map(controllable.Controllable):
-    _LOGGER = logging.getLogger(__name__ + ".Map")
+    _LOGGER = logging.getLogger('Map')
 
     def __init__(self, name: str, start_door_id: int = None):
         super().__init__()
         self._LOGGER.debug(f"Loading map '{name}'...")
-        self._player = entities.Player("Character", self)
+        self._player = entities.Player('Character', self)
         self._player.map = self
 
-        with open(os.path.join(gv.MAPS_DIR, name + ".map"), "rb") as f:
+        with open(os.path.join(gv.MAPS_DIR, name + '.map'), 'rb') as f:
             raw_data = pickle.load(f)
-        width, height = map(int, raw_data["size"])
-        self._background_color = raw_data["background_color"]
+        width, height = map(int, raw_data['size'])
+        self._background_color = raw_data['background_color']
         if start_door_id is None:
-            self._player.set_position(*raw_data["start"])
+            self._player.set_position(*raw_data['start'])
         self._rect = pygame.Rect(0, 0, width * gv.SCREEN_TILE_SIZE, height * gv.SCREEN_TILE_SIZE)
 
         def load_layer(group, layer_name):
@@ -39,25 +38,25 @@ class Map(controllable.Controllable):
                                 group.add(tile)
 
         self._background_tiles_list = psp.Group()
-        load_layer(self._background_tiles_list, "bg")
+        load_layer(self._background_tiles_list, 'bg')
         self._background2_tiles_list = psp.Group()
-        load_layer(self._background2_tiles_list, "bg2")
+        load_layer(self._background2_tiles_list, 'bg2')
         self._main_tiles_list = psp.Group()
-        load_layer(self._main_tiles_list, "main")
+        load_layer(self._main_tiles_list, 'main')
         self._foreground_tiles_list = psp.Group()
-        load_layer(self._foreground_tiles_list, "fg")
+        load_layer(self._foreground_tiles_list, 'fg')
 
-        self._walls = raw_data["walls"]
+        self._walls = raw_data['walls']
         self._doors = {}
-        for door in raw_data["doors"]:
-            ident = door["id"]
-            pos = door["position"]
-            dest = door["destination"]
+        for door in raw_data['doors']:
+            ident = door['id']
+            pos = door['position']
+            dest = door['destination']
             if dest is not None:
-                self._doors[pos] = tiles.Door(ident, pos[0], pos[1], door["state"], destination_map=dest["map"],
-                                              destination_door_id=dest["door"])
+                self._doors[pos] = tiles.Door(ident, pos[0], pos[1], door['state'], destination_map=dest['map'],
+                                              destination_door_id=dest['door'])
             else:
-                self._doors[pos] = tiles.Door(ident, pos[0], pos[1], door["state"])
+                self._doors[pos] = tiles.Door(ident, pos[0], pos[1], door['state'])
             if start_door_id == ident:
                 self._player.set_position(*self._doors[pos].position)
 
@@ -85,7 +84,7 @@ class Map(controllable.Controllable):
     def player(self) -> entities.Player:
         return self._player
 
-    def update(self) -> typ.Optional[actions.AbstractAction]:
+    def update(self) -> actions.AbstractAction | None:
         super().update()
         self._entities_list.update()
         previous_player_pos = self._player.tile_position
@@ -176,9 +175,9 @@ class Map(controllable.Controllable):
     def can_go(self, x: int, y: int) -> bool:
         """Checks if it is possible to go to a specific tile."""
         try:
-            return 0 <= x < self._rect.width // gv.SCREEN_TILE_SIZE \
-                   and 0 <= y < self._rect.height // gv.SCREEN_TILE_SIZE \
-                   and self._walls[y][x] == 0
+            return (0 <= x < self._rect.width // gv.SCREEN_TILE_SIZE
+                    and 0 <= y < self._rect.height // gv.SCREEN_TILE_SIZE
+                    and self._walls[y][x] == 0)
         except IndexError:
             return False
 
@@ -197,7 +196,7 @@ class _MapTitleLabel(menus.Component):
         return self._visible
 
     @property
-    def size(self) -> typ.Tuple[int, int]:
+    def size(self) -> tuple[int, int]:
         return 2 * self._gradient_width + self._label.get_rect().width, self._label.get_rect().height
 
     def update(self):

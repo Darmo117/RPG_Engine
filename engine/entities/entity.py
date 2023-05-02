@@ -1,10 +1,10 @@
 import abc
 import time
 
-from engine import sprite as sp, global_values as gv
+from .. import global_values as gv, sprite as sp
 
 
-class Entity(sp.TileSprite, metaclass=abc.ABCMeta):
+class Entity(sp.TileSprite, abc.ABC):
     """This class represents an entity. Entities are created each time a map is loaded."""
 
     UP = (0, -1)

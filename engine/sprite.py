@@ -1,8 +1,6 @@
-import typing as typ
-
 import pygame
 
-from engine import global_values as gv
+from . import global_values as gv
 
 
 class Sprite(pygame.sprite.Sprite):
@@ -22,10 +20,10 @@ class Sprite(pygame.sprite.Sprite):
         return self._rect.copy()
 
     @property
-    def position(self) -> typ.Tuple[int, int]:
+    def position(self) -> tuple[int, int]:
         return self._rect.x, self._rect.y
 
-    def translate(self, tx, ty):
+    def translate(self, tx: int, ty: int):
         self._rect.x += tx
         self._rect.y += ty
         self._image.get_rect().x += tx

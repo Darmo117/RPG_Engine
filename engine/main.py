@@ -8,27 +8,27 @@ import traceback
 
 import pygame
 
-from engine import global_values as gv, game_map, entities, texture_manager as tl, config, menus, actions, controllable
+from . import actions, config, controllable, entities, game_map, global_values as gv, menus, texture_manager as tl
 
 
 class GameEngine:
-    _LOGGER = logging.getLogger(__name__ + ".GameEngine")
+    _LOGGER = logging.getLogger('GameEngine')
 
     def __init__(self):
         parser = cp.ConfigParser()
-        with open(gv.GAME_INIT_FILE, encoding="UTF-8") as f:
+        with open(gv.GAME_INIT_FILE, encoding='UTF-8') as f:
             parser.read_file(f)
-        cfg = dict(parser["Game"])
-        if "languages" in cfg:
-            cfg["languages"] = cfg["languages"].split("|")
+        cfg = dict(parser['Game'])
+        if 'languages' in cfg:
+            cfg['languages'] = cfg['languages'].split("|")
         if "debug" in cfg:
-            if cfg["debug"] == "true":
+            if cfg['debug'] == 'true':
                 v = True
-            elif cfg["debug"] == "false":
+            elif cfg['debug'] == 'false':
                 v = False
             else:
                 raise ValueError(f"'{cfg['debug']}' cannot be converted to boolean!")
-            cfg["debug"] = v
+            cfg['debug'] = v
         gv.CONFIG = config.Config(**cfg)
 
         self._current_map = None
@@ -96,11 +96,10 @@ class GameEngine:
     def _loop(self, screen: pygame.Surface):
         transition = None
 
-        # noinspection PyShadowingNames
-        def do(c: controllable.Controllable, transition):
+        def get_transition(c: controllable.Controllable, trans):
             """Updates and draws a controllable component. May return a transition."""
             if c is not None:
-                c.controls_enabled = transition is None
+                c.controls_enabled = trans is None
                 action = c.update()
                 c.draw(screen)
                 if action is not None:
@@ -121,8 +120,8 @@ class GameEngine:
                 if self._current_map is not None:
                     self._current_map.on_event(event)
 
-            t1 = do(self._current_screen, transition)
-            t2 = do(self._current_map, transition)
+            t1 = get_transition(self._current_screen, transition)
+            t2 = get_transition(self._current_map, transition)
 
             if t1 is not None:
                 transition = t1

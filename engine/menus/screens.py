@@ -1,9 +1,8 @@
 import os
-import typing as typ
 
 import pygame
 
-from engine import menus, global_values as gv, i18n, actions, controllable
+from .. import actions, controllable, global_values as gv, i18n, menus
 
 
 class AbstractScreen(controllable.Controllable):
@@ -42,7 +41,7 @@ class TitleScreen(AbstractScreen):
         if self._controls_enabled:
             self._menu.on_event(event)
 
-    def update(self) -> typ.Optional[actions.AbstractAction]:
+    def update(self) -> actions.AbstractAction | None:
         super().update()
         self._menu.update()
         return self._action if self._controls_enabled else None

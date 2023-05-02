@@ -1,4 +1,4 @@
-from engine import sprite, global_values as gv
+from .. import global_values as gv, sprite
 
 
 class Tile(sprite.TileSprite):

@@ -1,15 +1,14 @@
 import configparser as cp
 import logging
 import os
-import typing as typ
 
 import pygame
 
-from engine import global_values as gv, types as tp
+from . import global_values as gv, types as tp
 
 
 class TexturesManager:
-    _LOGGER = logging.getLogger(__name__ + ".TexturesManager")
+    _LOGGER = logging.getLogger('TexturesManager')
 
     FONT_COLOR = (255, 255, 255, 255)
 
@@ -18,37 +17,37 @@ class TexturesManager:
         self._tilesets = {}
         self._sprite_sheets = {}
         self._dialog_box = None
-        self._LOGGER.debug("Loading textures...")
+        self._LOGGER.debug('Loading textures...')
         self._load_tilesets()
         self._load_sprite_sheets()
         self._dialog_box = pygame.image.load(os.path.join(gv.MENUS_DIR, "menu_box.png")).convert_alpha()
-        self._LOGGER.debug("Loaded textures.")
+        self._LOGGER.debug('Loaded textures.')
 
     def _load_tilesets(self):
-        self._LOGGER.debug("Loading tilesets...")
+        self._LOGGER.debug('Loading tilesets...')
         with open(os.path.join(gv.TILESETS_DIR, gv.TILESETS_INDEX_FILE)) as f:
             # Add dummy section for parser
-            content = "[Tilesets]\n" + f.read()
+            content = '[Tilesets]\n' + f.read()
         parser = cp.ConfigParser()
         parser.read_string(content)
 
-        for ident, tileset in parser["Tilesets"].items():
-            if not tileset.endswith(".png"):
-                raise ValueError("Tileset file is not PNG image!")
+        for ident, tileset in parser['Tilesets'].items():
+            if not tileset.endswith('.png'):
+                raise ValueError('Tileset file is not PNG image!')
             ident = int(ident)
             if ident in self._tilesets:
-                raise ValueError(f"Duplicate ID {ident}!")
+                raise ValueError(f'Duplicate ID {ident}!')
             self._tilesets[ident] = pygame.image.load(os.path.join(gv.TILESETS_DIR, tileset)).convert_alpha()
-        self._LOGGER.debug("Loaded tilesets.")
+        self._LOGGER.debug('Loaded tilesets.')
 
     def _load_sprite_sheets(self):
-        self._LOGGER.debug("Loading sprite sheets...")
+        self._LOGGER.debug('Loading sprite sheets...')
         path = gv.SPRITES_DIR
         for sprite_sheet in os.listdir(path):
-            if sprite_sheet.endswith(".png"):
+            if sprite_sheet.endswith('.png'):
                 self._sprite_sheets[os.path.splitext(sprite_sheet)[0]] = pygame.image.load(
                     os.path.join(path, sprite_sheet)).convert_alpha()
-        self._LOGGER.debug("Loaded sprite sheets.")
+        self._LOGGER.debug('Loaded sprite sheets.')
 
     @property
     def font(self):
@@ -70,8 +69,8 @@ class TexturesManager:
         return pygame.transform.scale(image, (size[0] * gv.SCALE, size[1] * gv.SCALE))
 
     @staticmethod
-    def _get_texture(index: int, size: tp.Dimension, textures: typ.Dict[typ.Union[str, int], pygame.Surface],
-                     sheet_name: typ.Union[str, int]):
+    def _get_texture(index: int, size: tp.Dimension, textures: dict[str | int, pygame.Surface],
+                     sheet_name: str | int):
         # noinspection PyArgumentList
         image = pygame.Surface(size, pygame.SRCALPHA).convert_alpha()
         sheet = textures[sheet_name]

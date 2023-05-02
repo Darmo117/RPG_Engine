@@ -1,5 +1,4 @@
 import abc
-import typing as typ
 
 import pygame
 
@@ -7,8 +6,7 @@ from engine import actions
 
 
 class Controllable(abc.ABC):
-    """
-    A controllable element can be updated and drawn onto the screen.
+    """A controllable element can be updated and drawn onto the screen.
     Controls can also be enabled/disabled.
     """
 
@@ -27,7 +25,7 @@ class Controllable(abc.ABC):
         """Called when an input event occurs."""
         pass
 
-    def update(self) -> typ.Optional[actions.AbstractAction]:
+    def update(self) -> actions.AbstractAction | None:
         pass
 
     def draw(self, screen: pygame.Surface):

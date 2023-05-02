@@ -5,7 +5,7 @@ import typing as typ
 
 import pygame
 
-from engine import global_values as gv, types as tp
+from .. import global_values as gv, types as tp
 
 
 class Component(abc.ABC):
@@ -39,7 +39,7 @@ class Component(abc.ABC):
     def draw(self, surface: pygame.Surface, position: tp.Position):
         """
         Draws this component on a surface at the given position.
-        Should not be overriden by sub-classes.
+        Should not be overriden by subclasses.
 
         :param surface: The surface to draw on.
         :param position: Where to draw the component.
@@ -117,7 +117,7 @@ class Menu(Component):
         super().__init__(padding=10)
         self._grid_width = columns
         self._grid_height = rows
-        self._grid: typ.List[typ.List[typ.Optional[Button]]] = [[None] * columns for _ in range(rows)]
+        self._grid: list[list[Button | None]] = [[None] * columns for _ in range(rows)]
         self._selection = None
         self._gap = gap
         self._update_size()
@@ -134,7 +134,7 @@ class Menu(Component):
 
     def set_item(self, position: tp.Position, button: Button):
         if not isinstance(button, Button):
-            raise ValueError("Component is not a button!")
+            raise ValueError('Component is not a button!')
         self._grid[position[0]][position[1]] = button
         self._update_size()
 

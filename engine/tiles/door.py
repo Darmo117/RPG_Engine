@@ -3,7 +3,8 @@ class Door:
     LOCKED = 1
     HIDDEN = 2
 
-    def __init__(self, ident: int, x: int, y: int, state: int, destination_map: str = None, destination_door_id: int = None):
+    def __init__(self, ident: int, x: int, y: int, state: int, destination_map: str = None,
+                 destination_door_id: int = None):
         self._id = ident
         self._position = x, y
         self._dest_map = destination_map
