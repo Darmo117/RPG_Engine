@@ -1,4 +1,7 @@
-class Door:
+from . import _base
+
+
+class Door(_base.Trigger):
     OPEN = 0
     LOCKED = 1
     HIDDEN = 2
@@ -38,3 +41,11 @@ class Door:
     @property
     def hidden(self):
         return self._state == self.HIDDEN
+
+    def execute(self, map_):
+        pass  # TODO
+
+
+__all__ = [
+    'Door',
+]

@@ -1,6 +1,5 @@
 import pygame
-
-from . import global_values as gv
+from .. import _constants
 
 
 class Sprite(pygame.sprite.Sprite):
@@ -34,10 +33,16 @@ class TileSprite(Sprite):
     """Base class for tile-based sprites."""
 
     def __init__(self, tile_x: int, tile_y: int, image: pygame.Surface):
-        super().__init__(tile_x * gv.SCREEN_TILE_SIZE, tile_y * gv.SCREEN_TILE_SIZE, image)
+        super().__init__(tile_x * _constants.SCREEN_TILE_SIZE, tile_y * _constants.SCREEN_TILE_SIZE, image)
         self._tile_x = tile_x
         self._tile_y = tile_y
 
     @property
-    def tile_position(self):
+    def tile_position(self) -> tuple[int, int]:
         return self._tile_x, self._tile_y
+
+
+__all__ = [
+    'Sprite',
+    'TileSprite',
+]

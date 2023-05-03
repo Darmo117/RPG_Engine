@@ -1,10 +1,10 @@
 import abc
 import time
 
-from .. import global_values as gv, sprite as sp
+from .. import _constants, _textures
 
 
-class Entity(sp.TileSprite, abc.ABC):
+class Entity(_textures.TileSprite, abc.ABC):
     """This class represents an entity. Entities are created each time a map is loaded."""
 
     UP = (0, -1)
@@ -13,6 +13,12 @@ class Entity(sp.TileSprite, abc.ABC):
     RIGHT = (1, 0)
 
     def __init__(self, sprite_sheet: str, current_map, animation_length: int, speed: int):
+        """Create an entity.
+
+        :param sprite_sheet: Entity’s sprite sheet.
+        :param current_map: Map containing this entity.
+        :type current_map: engine.engine._map._map.Map
+        """
         self._remaining_x = 0
         self._remaining_y = 0
 
@@ -22,15 +28,15 @@ class Entity(sp.TileSprite, abc.ABC):
 
         self._map = current_map
 
-        size = (gv.SCREEN_TILE_SIZE, gv.SCREEN_TILE_SIZE)
+        size = (_constants.TILE_SIZE, _constants.TILE_SIZE)
         self._frames = {}
         self._idle_frames = {}
         for i, side in enumerate([self.DOWN, self.LEFT, self.RIGHT, self.UP]):
             self._frames[side] = [
-                gv.TEXTURE_MANAGER.get_sprite(offset + 3 * i, size, sprite_sheet)
+                self._map.game_engine.texture_manager.get_sprite(offset + 3 * i, size, sprite_sheet)
                 for offset in range(1, animation_length + 1)
             ]
-            self._idle_frames[side] = gv.TEXTURE_MANAGER.get_sprite(3 * i, size, sprite_sheet)
+            self._idle_frames[side] = self._map.game_engine.texture_manager.get_sprite(3 * i, size, sprite_sheet)
 
         self._animation_index = 0
         self._animation_timer = time.time()
@@ -91,8 +97,8 @@ class Entity(sp.TileSprite, abc.ABC):
         self._speed = max(min(value, 16), 1)
 
     def set_position(self, x: int, y: int):
-        self._rect.x = x * gv.SCREEN_TILE_SIZE
-        self._rect.y = y * gv.SCREEN_TILE_SIZE
+        self._rect.x = x * _constants.SCREEN_TILE_SIZE
+        self._rect.y = y * _constants.SCREEN_TILE_SIZE
         self._update_image()
         self._tile_x = x
         self._tile_y = y
@@ -106,11 +112,11 @@ class Entity(sp.TileSprite, abc.ABC):
 
         if self._remaining_x == 0:
             actual_x = self._rect.x - self._map.shift_x
-            if actual_x % gv.SCREEN_TILE_SIZE != 0:
-                offset = actual_x % gv.SCREEN_TILE_SIZE
-                adjust = offset - (gv.SCREEN_TILE_SIZE if self._direction[0] < 0 else 0)
+            if actual_x % _constants.SCREEN_TILE_SIZE != 0:
+                offset = actual_x % _constants.SCREEN_TILE_SIZE
+                adjust = offset - (_constants.SCREEN_TILE_SIZE if self._direction[0] < 0 else 0)
                 self._rect.x -= adjust
-            self._tile_x = (self._rect.x - self._map.shift_x) // gv.SCREEN_TILE_SIZE
+            self._tile_x = (self._rect.x - self._map.shift_x) // _constants.SCREEN_TILE_SIZE
 
         if self._remaining_y > 0:
             self._rect.y += self._speed * self._direction[1]
@@ -120,11 +126,11 @@ class Entity(sp.TileSprite, abc.ABC):
 
         if self._remaining_y == 0:
             actual_y = self._rect.y - self._map.shift_y
-            if actual_y % gv.SCREEN_TILE_SIZE != 0:
-                offset = actual_y % gv.SCREEN_TILE_SIZE
-                adjust = offset - (gv.SCREEN_TILE_SIZE if self._direction[1] < 0 else 0)
+            if actual_y % _constants.SCREEN_TILE_SIZE != 0:
+                offset = actual_y % _constants.SCREEN_TILE_SIZE
+                adjust = offset - (_constants.SCREEN_TILE_SIZE if self._direction[1] < 0 else 0)
                 self._rect.y -= adjust
-            self._tile_y = (self._rect.y - self._map.shift_y) // gv.SCREEN_TILE_SIZE
+            self._tile_y = (self._rect.y - self._map.shift_y) // _constants.SCREEN_TILE_SIZE
 
         if self.is_moving():
             current_time = time.time()
@@ -155,8 +161,8 @@ class Entity(sp.TileSprite, abc.ABC):
         if self._remaining_x == 0 and self._remaining_y == 0:
             self._direction = tx, ty
             if can_go:
-                self._remaining_x = abs(tx) * gv.SCREEN_TILE_SIZE
-                self._remaining_y = abs(ty) * gv.SCREEN_TILE_SIZE
+                self._remaining_x = abs(tx) * _constants.SCREEN_TILE_SIZE
+                self._remaining_y = abs(ty) * _constants.SCREEN_TILE_SIZE
         self._update_image()
 
     def _update_image(self):
@@ -166,3 +172,8 @@ class Entity(sp.TileSprite, abc.ABC):
             self._image = self._idle_frames[self._direction]
         self._image.get_rect().x = self._rect.x
         self._image.get_rect().y = self._rect.y
+
+
+__all__ = [
+    'Entity',
+]

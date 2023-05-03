@@ -1,4 +1,5 @@
-/data
-/logs
-/utils
-!/utils/generate_map.py
+run/
+logs/
+utils/
+!utils/generate_map.py
+!utils/__init__.py
