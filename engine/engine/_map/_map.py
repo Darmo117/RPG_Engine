@@ -1,3 +1,4 @@
+import typing as _typ
 import pickle
 import time
 
@@ -31,26 +32,20 @@ class Map(_scene.Scene):
             self._player.set_position(*raw_data['start'])
         self._rect = pygame.Rect(0, 0, width * _constants.SCREEN_TILE_SIZE, height * _constants.SCREEN_TILE_SIZE)
 
-        def load_layer(group, layer_name):
-            layers = raw_data['layers']
-            if layer_name in layers:
-                for y in range(height):
-                    for x in range(width):
-                        if layers[layer_name][y][x] is not None:
-                            tile_index, tileset = layers[layer_name][y][x]
-                            texture = self._game_engine.texture_manager.get_tile(int(tile_index), int(tileset))
-                            tile = _textures.TileSprite(x, y, texture)
-                            if tile is not None:
-                                group.add(tile)
+        def load_layer(tiles: list[list[tuple[int, int]]]) -> _psp.Group:
+            layer = _psp.Group()
+            for y in range(height):
+                for x in range(width):
+                    if tiles[y][x] is not None:
+                        tile_index, tileset = tiles[y][x]
+                        texture = self._game_engine.texture_manager.get_tile(int(tile_index), int(tileset))
+                        if tile := _textures.TileSprite(x, y, texture):
+                            # noinspection PyTypeChecker
+                            layer.add(tile)
+            return layer
 
-        self._background_tiles_list = _psp.Group()
-        load_layer(self._background_tiles_list, 'bg')
-        self._background2_tiles_list = _psp.Group()
-        load_layer(self._background2_tiles_list, 'bg2')
-        self._main_tiles_list = _psp.Group()
-        load_layer(self._main_tiles_list, 'main')
-        self._foreground_tiles_list = _psp.Group()
-        load_layer(self._foreground_tiles_list, 'fg')
+        self._entity_layer = raw_data['entity_layer']
+        self._tile_layers = [load_layer(tiles) for tiles in raw_data['layers']]
 
         self._walls = raw_data['walls']
         self._doors = {}
@@ -66,9 +61,9 @@ class Map(_scene.Scene):
             if start_door_id == ident:
                 self._player.set_position(*self._doors[pos].position)
 
-        self._entities_list = _psp.Group()
+        self._entities = _psp.Group()
         # noinspection PyTypeChecker
-        self._entities_list.add(self._player)
+        self._entities.add(self._player)
 
         w, h = game_engine.window_size
         if self._rect.width < w:
@@ -112,7 +107,7 @@ class Map(_scene.Scene):
     def update(self) -> _events.Event | None:
         super().update()
         previous_player_pos = self._player.tile_position
-        self._entities_list.update()
+        self._entities.update()
         self._title_label.update()
 
         if self._controls_enabled:
@@ -171,12 +166,12 @@ class Map(_scene.Scene):
 
     def draw(self, screen: pygame.Surface):
         screen.fill(self._background_color)
-        self._background_tiles_list.draw(screen)
-        self._background2_tiles_list.draw(screen)
-        self._main_tiles_list.draw(screen)
-        self._entities_list.draw(screen)
-        self._foreground_tiles_list.draw(screen)
-
+        # Render layers and entities
+        for i, layer in enumerate(self._tile_layers):
+            layer.draw(screen)
+            if i == self._entity_layer:
+                self._entities.draw(screen)
+        # Render map name label
         if self._title_label.visible:
             self._title_label.draw(screen)
 
@@ -184,16 +179,14 @@ class Map(_scene.Scene):
         self._rect.x += tx
         self._rect.y += ty
 
-        def translate_sprites(group):
+        def translate_sprites(group: _typ.Iterable[_textures.Sprite]):
             for element in group:
                 if player or not isinstance(element, _entities.PlayerEntity):
                     element.translate(tx, ty)
 
-        translate_sprites(self._background_tiles_list)
-        translate_sprites(self._background2_tiles_list)
-        translate_sprites(self._main_tiles_list)
-        translate_sprites(self._foreground_tiles_list)
-        translate_sprites(self._entities_list)
+        for layer in self._tile_layers:
+            translate_sprites(layer)
+        translate_sprites(self._entities)
 
     def can_go(self, x: int, y: int) -> bool:
         """Checks if it is possible to go to a specific tile."""
