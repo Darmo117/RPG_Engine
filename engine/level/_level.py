@@ -9,7 +9,7 @@ import pygame
 from . import interactions as inter
 from .. import constants, entities, events, io, render, scene
 from ..render import util as _rutil
-from ..screens import components as _comp
+from ..screens import components as _comp, texts
 
 
 class LevelLoader:
@@ -129,7 +129,7 @@ class Level(scene.Scene):
 
         self._title_label = _LevelNameLabel(
             game_engine.texture_manager,
-            game_engine.config.active_language.translate(name)
+            game_engine.config.active_language.translate(f'level.{name}.name')
         )
         self._title_label.x = 6
         self._title_label.y = 12
@@ -237,12 +237,11 @@ class Level(scene.Scene):
 class _LevelNameLabel(_comp.Component):
     def __init__(self, texture_manager: render.TexturesManager, title: str):
         super().__init__(texture_manager)
-        self._label = texture_manager.render_text(title)
+        self._label = texts.parse_line(title)
         self._gradient_width = 30
         self._title_timer = None
         self._visible = False
-        self.w = self._label.get_rect().width
-        self.h = self._label.get_rect().height
+        self.w, self.h = self._label.get_size(texture_manager)
         self._update_image()
 
     @property
@@ -259,18 +258,19 @@ class _LevelNameLabel(_comp.Component):
         return self._image
 
     def _update_image(self):
+        size = self._label.get_size(self._tm)
         alpha = 128
-        text = pygame.Surface(self._label.get_rect().size, pygame.SRCALPHA, 32)
-        text.fill((0, 0, 0, alpha))
-        text.blit(self._label, (0, 0))
+        image = pygame.Surface(size, pygame.SRCALPHA, 32)
+        image.fill((0, 0, 0, alpha))
+        self._label.draw(self._tm, image, (0, 0))
 
-        w, h = self._label.get_rect().size
+        w, h = size
         self._image = pygame.Surface((w + 2 * self._gradient_width, h), pygame.SRCALPHA, 32)
         _rutil.alpha_gradient(self._image, pygame.Color(0, 0, 0), 0, alpha,
                               rect=pygame.Rect(0, 0, self._gradient_width, h))
         _rutil.alpha_gradient(self._image, pygame.Color(0, 0, 0), alpha, 0,
                               rect=pygame.Rect(w + self._gradient_width, 0, self._gradient_width, h))
-        self._image.blit(text, (self._gradient_width, 0))
+        self._image.blit(image, (self._gradient_width, 0))
 
 
 @dataclasses.dataclass(frozen=True)
