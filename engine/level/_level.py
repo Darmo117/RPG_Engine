@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import gzip
 import time
+import typing as _typ
 
 import pygame
 
@@ -147,6 +148,11 @@ class Level(scene.Scene):
         self._player = entities.PlayerEntity('Character', self)
         self._player.position = at
         self._entities.add(self._player)
+
+    def spawn_entity(self, supplier: _typ.Callable[[Level], entities.Entity], at: pygame.Vector2):
+        entity = supplier(self)
+        entity.position = at
+        self._entities.add(entity)
 
     def on_input_event(self, event: pygame.event.Event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
