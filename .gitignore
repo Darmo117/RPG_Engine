@@ -1,5 +1,3 @@
 run/
 logs/
-utils/
-!utils/generate_map.py
-!utils/__init__.py
+scripts/fonts_repo.py
