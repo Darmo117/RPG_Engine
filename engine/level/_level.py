@@ -10,7 +10,7 @@ import pygame
 from . import interactions as inter
 from .. import constants, entities, events, io, render, scene
 from ..render import util as _rutil
-from ..screens import components as _comp, texts
+from ..screens import components as _comp, texts, screens
 
 
 class LevelLoader:
@@ -157,7 +157,7 @@ class Level(scene.Scene):
     def on_input_event(self, event: pygame.event.Event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             # TODO display menu
-            self._game_engine.fire_event(events.QuitGameEvent())
+            self._game_engine.fire_event(events.GoToScreenEvent(screens.TitleScreen(self._game_engine)))
         else:
             super().on_input_event(event)
 

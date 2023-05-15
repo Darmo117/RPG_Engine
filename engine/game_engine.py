@@ -98,7 +98,7 @@ class GameEngine:
                 if event.type == pygame.QUIT:
                     self._stop()
                     break
-                if self._update_scene:
+                if self._update_scene and not self._scene_transition:
                     self._active_scene.on_input_event(event)
 
             if self._scene_transition:
@@ -157,7 +157,8 @@ class GameEngine:
         self._transition_to_scene(lvl, fade_out_duration=500)
 
     def load_screen(self, screen: screens.Screen):
-        self._transition_to_scene(screen, fade_out_duration=0)
+        duration = 0 if isinstance(self._active_scene, screens.Screen) else 500
+        self._transition_to_scene(screen, fade_out_duration=duration)
 
     def _transition_to_scene(self, scene: scene_.Scene, fade_out_duration: int = 250):
         if not self._active_scene or fade_out_duration == 0:

@@ -40,9 +40,7 @@ class ChangeLevelInteraction(_base.TileInteraction):
         return self.is_open and isinstance(entity, entities.PlayerEntity)
 
     def on_entity_inside(self, level, entity: entities.Entity):
-        level.game_engine.fire_event(events.ToggleSceneUpdateEvent(should_update=False)
-                                     .then(events.ChangeLevelEvent(self._dest_map, self._position)
-                                           .then(events.ToggleSceneUpdateEvent(should_update=True))))
+        level.game_engine.fire_event(events.ChangeLevelEvent(self._dest_map, self._position))
 
     def write_to_buffer(self, buffer: io.ByteBuffer):
         super().write_to_buffer(buffer)

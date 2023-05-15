@@ -130,11 +130,7 @@ class TitleScreen(Screen):
         self._new_game_player_spawn = pygame.Vector2(*new_game_data['player_spawn'])
 
     def _on_new_game(self, _):
-        self._game_engine.fire_event(
-            events.ToggleSceneUpdateEvent(should_update=False)
-            .then(events.ChangeLevelEvent(self._new_game_level_name, self._new_game_player_spawn)
-                  .then(events.ToggleSceneUpdateEvent(should_update=True)))
-        )
+        self._game_engine.fire_event(events.ChangeLevelEvent(self._new_game_level_name, self._new_game_player_spawn))
 
     def _on_load_game(self, _):
         self._fire_screen_event(LoadGameScreen(self._game_engine, self))
