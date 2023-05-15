@@ -136,7 +136,7 @@ class GameEngine:
                 self.load_level(level_name, spawn_location)
             case events.GoToScreenEvent(screen=screen):
                 self.load_screen(screen)
-            case events.SpawnEntityEvent(entity_supplier=entity_supplier, at=at) as e if in_level:
+            case events.SpawnEntityEvent(entity_supplier=entity_supplier, at=at) if in_level:
                 # noinspection PyTypeChecker
                 lvl: level.Level = self._active_scene
                 lvl.spawn_entity(entity_supplier, at)
