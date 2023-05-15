@@ -67,6 +67,7 @@ def parse_line(text: str) -> Text:
             format_mode = False
             if c == FORMAT_TOKEN:  # §§ is treated as the literal character §
                 buffer += c
+                i += 1
                 continue
             style = get_style()  # Generate style before eventual update
             if c == ITALICS_TOKEN:
@@ -82,6 +83,7 @@ def parse_line(text: str) -> Text:
                 color_buffer = ''
             else:
                 buffer += c
+                i += 1
                 continue
             if buffer:
                 append_buffer_to_line(style)
