@@ -26,14 +26,15 @@ class Entity(abc.ABC):
         :type level: engine.level.Level
         :param speed: Movement speed.
         """
+        tm = level.game_engine.texture_manager
         self._level = level
         self._pos = pygame.Vector2()
+        self._size = tm.get_sprite_size(sprite_sheet)
         self._next_tile = None
         self._queued_direction = None  # Helps reduce character stutter
         self._remaining_distance = 0
         self._direction = 0
         self._speed = speed
-        tm = self._level.game_engine.texture_manager
         self._anim_frames = tm.get_sprite_frames(sprite_sheet)
 
         self._frames: list[list[pygame.Surface]] = []
@@ -60,6 +61,10 @@ class Entity(abc.ABC):
     @property
     def tile_position(self) -> pygame.Vector2:
         return pygame.Vector2(int(self._pos.x), int(self._pos.y))
+
+    @property
+    def size(self) -> pygame.Vector2:
+        return pygame.Vector2(self._size)
 
     @property
     def direction(self) -> int:

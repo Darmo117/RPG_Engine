@@ -94,6 +94,9 @@ class TexturesManager:
         sheet_data = self._sprite_sheets[sprite_sheet]
         return self._get_texture(index, sheet_data[0], sheet_data[1])
 
+    def get_sprite_size(self, sprite_sheet: str) -> tuple[int, int]:
+        return self._sprite_sheets[sprite_sheet][1]
+
     def get_sprite_frames(self, sprite_sheet: str) -> int:
         return self._sprite_sheets[sprite_sheet][2]
 

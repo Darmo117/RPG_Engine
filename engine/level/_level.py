@@ -195,16 +195,23 @@ class Level(scene.Scene):
             for y in range(self._height):
                 for x in range(self._width):
                     tile = self.get_tile(layer, x, y)
-                    # TODO culling
-                    if tile:
-                        self._draw_tile(tile, pygame.Vector2(x, y), screen)
+                    pos = pygame.Vector2(x, y)
+                    # Culling
+                    size = pygame.Vector2(constants.SCREEN_TILE_SIZE, constants.SCREEN_TILE_SIZE)
+                    if tile and self.is_rect_visible(screen, self._screen_pos(pos), size):
+                        self._draw_tile(tile, pos, screen)
             if layer == self._entity_layer:
                 for entity in self._entities:
-                    # TODO culling
-                    self._draw_entity(entity, screen)
-        # Render map name label
+                    # Culling
+                    if self.is_rect_visible(screen, self._screen_pos(entity.position), entity.size * constants.SCALE):
+                        self._draw_entity(entity, screen)
+        # Render level name label
         if self._title_label.visible:
             self._title_label.draw(screen)
+
+    def is_rect_visible(self, screen: pygame.Surface, pos: pygame.Vector2, size: pygame.Vector2) -> bool:
+        w, h = screen.get_size()
+        return -size[0] <= pos.x <= w and -size[1] <= pos.y <= h
 
     def _draw_tile(self, tile: Tile, pos: pygame.Vector2, screen: pygame.Surface):
         texture = self._game_engine.texture_manager.get_tile(tile.tile_id, tile.tileset_id)
