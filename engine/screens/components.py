@@ -331,7 +331,7 @@ class Menu(Component):
                             else:
                                 r -= 1
 
-            elif key == pygame.K_RETURN:
+            elif key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 self._get_button(*self._selection).on_action()
 
     def _select_button(self, row: int, col: int) -> bool:
