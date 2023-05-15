@@ -7,7 +7,7 @@ import time
 import pygame
 
 from . import interactions as inter
-from .. import constants, entities, io, render, scene
+from .. import constants, entities, events, io, render, scene
 from ..render import util as _rutil
 from ..screens import components as _comp
 
@@ -151,14 +151,13 @@ class Level(scene.Scene):
     def on_input_event(self, event: pygame.event.Event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             # TODO display menu
-            self._game_engine.stop()  # temp
+            self._game_engine.fire_event(events.QuitGameEvent())
         else:
             super().on_input_event(event)
 
     def update(self):
         super().update()
         self._poll_events()
-        self._update_camera_position()
         for entity in self._entities:
             entity.update()
         self._title_label.update()
@@ -189,6 +188,7 @@ class Level(scene.Scene):
             self._camera_pos.y = (player_pos.y + 0.5) * constants.SCREEN_TILE_SIZE - wh / 2
 
     def draw(self, screen: pygame.Surface):
+        self._update_camera_position()
         screen.fill(self._background_color)
         # Render layers and entities
         for layer in range(len(self._tiles)):

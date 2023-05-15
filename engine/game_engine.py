@@ -96,7 +96,7 @@ class GameEngine:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.stop()
+                    self._stop()
                     break
                 if self._update_scene:
                     self._active_scene.on_input_event(event)
@@ -145,14 +145,14 @@ class GameEngine:
                 self._event_wait_delay = ms
                 self._event_wait_start_time = _time_millis()
             case events.QuitGameEvent():
-                self.stop()
+                self._stop()
             case e:
                 self._logger.warning(f'Unexpected event: {e}')
 
     def load_level(self, name: str, player_spawn_location: pygame.Vector2):
         lvl = self._level_loader.load_level(name)
         lvl.spawn_player(player_spawn_location)
-        self._transition_to_scene(lvl)
+        self._transition_to_scene(lvl, fade_out_duration=500)
 
     def load_screen(self, screen: screens.Screen):
         self._transition_to_scene(screen, fade_out_duration=0)
@@ -163,7 +163,7 @@ class GameEngine:
         else:
             self._scene_transition = _SceneTransition(self, fade_out_duration, scene)
 
-    def stop(self):
+    def _stop(self):
         self._running = False
 
 
