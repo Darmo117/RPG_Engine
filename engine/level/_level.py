@@ -130,7 +130,7 @@ class Level(scene.Scene):
 
         self._title_label = _LevelNameLabel(
             game_engine.texture_manager,
-            game_engine.config.active_language.translate(f'level.{name}.name')
+            game_engine.config.active_language.translate(f'user_generated.level.{name}.name')
         )
         self._title_label.x = 6
         self._title_label.y = 12
