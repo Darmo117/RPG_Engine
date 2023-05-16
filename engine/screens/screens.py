@@ -192,7 +192,7 @@ class SettingsScreen(Screen):
             tm, lang.translate(f'screen.settings.menu.bgs_volume'), 'bgs_volume', percent_format,
             self._config.bg_sounds_volume, self._on_bgs_volume))
         menu.add_item(components.Button(
-            tm, lang.translate(f'screen.settings.menu.menu_volume'), 'menu_volume', percent_format,
+            tm, lang.translate(f'screen.settings.menu.sfx_volume'), 'sfx_volume', percent_format,
             self._config.sound_effects_volume, self._on_menu_volume))
         menu.add_item(components.Button(
             tm, lang.translate(f'screen.settings.menu.master_volume'), 'master_volume', percent_format,
