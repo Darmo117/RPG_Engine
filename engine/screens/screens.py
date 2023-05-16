@@ -123,9 +123,10 @@ class TitleScreen(Screen):
         w, h = self._game_engine.window_size
         menu.x = (w - menu.size[0]) / 2
         menu.y = 2 * (h - menu.size[1]) / 3
-        with (constants.SCREENS_DIR / 'title.json').open(encoding='UTF-8') as f:
+        # TODO load game events globally in engine
+        with (constants.DATA_DIR / 'events.json').open(mode='r', encoding='UTF-8') as f:
             json_data = json.load(f)
-        new_game_data = json_data['new_game']
+        new_game_data = json_data['game_start']
         self._new_game_level_name = new_game_data['level_name']
         self._new_game_player_spawn = pygame.Vector2(*new_game_data['player_spawn'])
 

@@ -11,7 +11,7 @@ ROOT_DIR = pathlib.Path('data')
 TEXTURES_DIR = ROOT_DIR / 'textures'
 
 LANGS_DIR = ROOT_DIR / 'langs'
-SCREENS_DIR = ROOT_DIR / 'screens'
+DATA_DIR = ROOT_DIR / 'data'
 MAPS_DIR = ROOT_DIR / 'maps'
 SAVES_DIR = ROOT_DIR / 'saves'
 FONTS_DIR = ROOT_DIR / 'fonts'
