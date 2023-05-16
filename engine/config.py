@@ -10,10 +10,10 @@ from . import constants, i18n, maths
 
 def load_config() -> Config:
     game_config_parser = _cp.ConfigParser()
-    with constants.GAME_INIT_FILE.open(encoding='UTF-8') as f:
+    with constants.GAME_INIT_FILE.open(mode='r', encoding='UTF-8') as f:
         game_config_parser.read_file(f)
     settings_parser = _cp.ConfigParser()
-    with constants.SETTINGS_FILE.open(encoding='UTF-8') as f:
+    with constants.SETTINGS_FILE.open(mode='r', encoding='UTF-8') as f:
         settings_parser.read_file(f)
     font = pygame.font.Font(
         constants.FONTS_DIR / (game_config_parser.get('Game', 'font') + '.ttf'),

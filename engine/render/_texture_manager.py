@@ -46,12 +46,12 @@ class TexturesManager:
 
     def _load_tilesets(self):
         self._logger.debug('Loading tilesets…')
-        with (constants.TILESETS_DIR / constants.TILESETS_INDEX_FILE_NAME).open(encoding='UTF-8') as f:
+        with (constants.TILESETS_DIR / constants.TILESETS_INDEX_FILE_NAME).open(mode='r', encoding='UTF-8') as f:
             tilesets = json.load(f)
 
         for i, tileset in enumerate(tilesets):
             textures = pygame.image.load(constants.TILESETS_DIR / tileset).convert_alpha()
-            with (constants.TILESETS_DIR / (tileset + '.json')).open(mode='r') as f:
+            with (constants.TILESETS_DIR / (tileset + '.json')).open(mode='r', encoding='UTF-8') as f:
                 resolution = int(json.load(f)['resolution'])
             self._tilesets[i + 1] = (textures, resolution)
         self._logger.debug('Loaded tilesets.')
@@ -62,7 +62,7 @@ class TexturesManager:
             if sprite_sheet.is_file():
                 name = os.path.splitext(sprite_sheet.name)[0]
                 textures = pygame.image.load(sprite_sheet).convert_alpha()
-                with (sprite_sheet.parent / (sprite_sheet.name + '.json')).open(mode='r') as f:
+                with (sprite_sheet.parent / (sprite_sheet.name + '.json')).open(mode='r', encoding='UTF-8') as f:
                     json_data = json.load(f)
                 res = json_data['resolution']
                 resolution = (int(res[0]), int(res[1]))
