@@ -134,7 +134,7 @@ class Component(abc.ABC):
 
 class Button(Component):
     def __init__(self, texture_manager: render.TexturesManager, label: str, name: str,
-                 data_label_format: str = None, data=None,
+                 data_label_format: str | _typ.Callable[[_typ.Any], str] = None, data=None,
                  action: _typ.Callable[[Button], None] = None, enabled: bool = True):
         super().__init__(texture_manager, padding=5)
         self._raw_label = label
@@ -146,11 +146,16 @@ class Button(Component):
         self._selected = False
         text_size = texts.parse_line(label).get_size(texture_manager)
         if self._data_label_format:
-            data_text_size = texts.parse_line(self._data_label_format.format(self._data)).get_size(texture_manager)
+            data_text_size = texts.parse_line(self._get_data_label()).get_size(texture_manager)
             self.w, self.h = text_size[0] + data_text_size[0] + 2 * self._padding, max(text_size[1], data_text_size[1])
         else:
             self.w, self.h = text_size
         self._update_image()
+
+    def _get_data_label(self) -> str:
+        if isinstance(self._data_label_format, str):
+            return self._data_label_format.format(self._data)
+        return self._data_label_format(self._data)
 
     @property
     def label(self) -> str:
@@ -213,7 +218,7 @@ class Button(Component):
             disable(label)
         label.draw(tm, self._image, (self._padding, self._padding))
         if self._data_label_format:
-            data_label = texts.parse_line(self._data_label_format.format(self._data))
+            data_label = texts.parse_line(self._get_data_label())
             if not self._enabled:
                 disable(data_label)
             data_label.draw(tm, self._image, (self._padding + w - data_label.get_size(tm)[0], self._padding))

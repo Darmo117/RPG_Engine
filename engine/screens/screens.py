@@ -9,7 +9,7 @@ import typing as _typ
 import pygame
 
 from . import components
-from .. import config, constants, events, scene, game_state
+from .. import config, constants, events, game_state, i18n, scene
 
 _C = _typ.TypeVar('_C', bound=components.Component)
 
@@ -173,12 +173,15 @@ class SettingsScreen(Screen):
         super().__init__(game_engine, parent, constants.BACKGROUNDS_DIR / 'settings_screen.png')
         self._config = self._game_engine.config
         tm = self._game_engine.texture_manager
-        menu = self._add_component(components.Menu(tm, 6, 1))
+        menu = self._add_component(components.Menu(tm, 7, 1))
         lang = self._config.active_language
         percent_format = lang.translate('menu.label.percent_format')
         menu.add_item(components.Button(
             tm, lang.translate('screen.settings.menu.keyboard_config'), 'keyboard_config',
             action=self._on_keyboard_config, enabled=False))
+        menu.add_item(components.Button(
+            tm, lang.translate('screen.settings.menu.language'), 'language', lambda l: l.name,
+            self._config.active_language, self._on_language, enabled=len(self._config.languages) > 1))
         menu.add_item(components.Button(
             tm, lang.translate('screen.settings.menu.always_run'), 'always_run', '{}',
             self._on_off_label(self._config.always_run), self._on_always_run))
@@ -197,6 +200,13 @@ class SettingsScreen(Screen):
         w, h = self._game_engine.window_size
         menu.x = (w - menu.size[0]) / 2
         menu.y = 2 * (h - menu.size[1]) / 3
+
+    def _on_language(self, button: components.Button):
+        current_lang: i18n.Language = button.data
+        langs = sorted(self._config.languages, key=lambda l: l.name)
+        lang = langs[(langs.index(current_lang) + 1) % len(langs)]
+        self._game_engine.select_language(lang.code)
+        button.data = lang
 
     def _on_off_label(self, on: bool) -> str:
         return self._config.active_language.translate('menu.label.' + ('on' if on else 'off'))

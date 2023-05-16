@@ -1,5 +1,8 @@
+import argparse
+import dataclasses
 import datetime
 import logging
+import pathlib
 import sys
 import time
 import traceback
@@ -11,28 +14,52 @@ from .screens import screens
 
 
 def run(*argv: str) -> int:
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument('-d', '--debug', action='store_true', help='run in debug mode')
+    arg_parser.add_argument('-r', '--run-path', type=str, help='path to the directory containing the data directory')
     try:
-        return GameEngine(argv).run()
-    except BaseException as e:
+        args = arg_parser.parse_args(argv)
+    except SystemExit as e:
+        # Prevent exit, return error code instead
+        return e.code
+    cli_args = _CLIArgs(
+        debug=args.debug,
+        run_dir=args.run_path,
+    )
+    try:
+        return GameEngine(cli_args).run()
+    except BaseException as e:  # Catch errors that may occur before game loop starts
         print(_generate_crash_report(e), file=sys.stderr)
         return 1
+
+
+@dataclasses.dataclass(frozen=True)
+class _CLIArgs:
+    debug: bool
+    run_dir: pathlib.Path = None
 
 
 class GameEngine:
     NAME = 'RPG Engine'
     VERSION = '1.0'
 
-    def __init__(self, argv: tuple[str]):
+    def __init__(self, args: _CLIArgs):
         self._logger = logging.getLogger(self.NAME)
         pygame.init()
-        self._screen = pygame.display.set_mode((constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT))
-        self._config = config.load_config()
+        constants.init(root=args.run_dir)
+        self._config = config.load_config(debug=args.debug)
+        self._screen = pygame.display.set_mode(self._config.window_size)
         pygame.display.set_caption(self._config.game_title)
-        logging_level = logging.INFO
         if self._config.debug:
             logging_level = logging.DEBUG
-        logging.basicConfig(stream=sys.stdout, level=logging_level,
-                            format='%(asctime)s (%(name)s) [%(levelname)s] %(message)s')
+        else:
+            logging_level = logging.INFO
+        logging.basicConfig(
+            stream=sys.stdout,
+            level=logging_level,
+            format='%(asctime)s.%(msecs)03d (%(name)s) [%(levelname)s] %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+        )
         self._logger.debug(f'Config: {self._config}')
         self._texture_manager = render.TexturesManager(self._config.font)
         self._level_loader = level.LevelLoader(self)
@@ -61,6 +88,7 @@ class GameEngine:
 
     def select_language(self, code: str):
         self._config.set_active_language(code)
+        self._config.save()
 
     @property
     def window_size(self) -> tuple[int, int]:
@@ -88,7 +116,11 @@ class GameEngine:
             pygame.quit()
 
     def _loop(self):
-        self._active_scene = screens.LanguageSelectScreen(self)
+        if not self._config.active_language:
+            self._active_scene = screens.LanguageSelectScreen(self)
+        else:
+            self._active_scene = screens.TitleScreen(self)
+
         pygame.key.set_repeat(300, 150)
         clock = pygame.time.Clock()
         self._running = True
@@ -216,9 +248,8 @@ def _generate_crash_report(e: BaseException, scene: scene_.Scene = None) -> str:
     tb = ''.join(traceback.format_tb(e.__traceback__))
     date = datetime.datetime.now()
     message = f"""\
---- {GameEngine.NAME} Crash Report ---
+--- {GameEngine.NAME} (v{GameEngine.VERSION}) Crash Report ---
 
-Engine version: {GameEngine.VERSION}
 Time: {date.strftime("%Y-%m-%d %H:%M:%S")}
 Description: {e} 
 

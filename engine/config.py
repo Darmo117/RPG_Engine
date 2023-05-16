@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import configparser as _cp
+import json
+import logging
 import typing as _typ
 
 import pygame
@@ -8,29 +10,39 @@ import pygame
 from . import constants, i18n, maths
 
 
-def load_config() -> Config:
-    game_config_parser = _cp.ConfigParser()
-    with constants.GAME_INIT_FILE.open(mode='r', encoding='UTF-8') as f:
-        game_config_parser.read_file(f)
-    settings_parser = _cp.ConfigParser()
+def load_config(debug: bool = False) -> Config:
+    with (constants.DATA_DIR / constants.GAME_SETUP_FILE_NAME).open(mode='r', encoding='UTF-8') as f:
+        json_data = json.load(f)
+    font = pygame.font.Font(
+        constants.FONTS_DIR / (str(json_data['font']['name']) + '.ttf'),
+        int(json_data['font']['size'])
+    )
+    w, h = json_data['screen_size']
+    languages = list(map(i18n.Language, constants.LANGS_DIR.glob('*.json')))
+    settings_parser = _get_settings_parser()
     with constants.SETTINGS_FILE.open(mode='r', encoding='UTF-8') as f:
         settings_parser.read_file(f)
-    font = pygame.font.Font(
-        constants.FONTS_DIR / (game_config_parser.get('Game', 'font') + '.ttf'),
-        game_config_parser.getint('Game', 'font_size', fallback=12)
-    )
-    config = Config(
-        game_title=game_config_parser.get('Game', 'title', fallback='Game'),
+    return Config(
+        game_title=str(json_data['game_title']),
+        window_size=(int(w), int(h)),
         font=font,
-        languages=list(map(i18n.Language, constants.LANGS_DIR.glob('*.json'))),
+        languages=languages,
         bgm_volume=settings_parser.getint('Sound', 'bgm_volume', fallback=100),
         bgs_volume=settings_parser.getint('Sound', 'bgs_volume', fallback=100),
         sfx_volume=settings_parser.getint('Sound', 'sfx_volume', fallback=100),
         master_volume=settings_parser.getint('Sound', 'master_volume', fallback=100),
         always_run=settings_parser.getboolean('Gameplay', 'always_run', fallback=False),
-        debug=game_config_parser.getboolean('Game', 'debug', fallback=False)
+        selected_language=settings_parser.get('UI', 'language', fallback=None) if len(languages) > 1 else languages[0],
+        debug=debug,
     )
-    return config
+
+
+def _get_settings_parser():
+    settings_parser = _cp.ConfigParser()
+    settings_parser.add_section('UI')
+    settings_parser.add_section('Sound')
+    settings_parser.add_section('Gameplay')
+    return settings_parser
 
 
 class Config:
@@ -39,6 +51,7 @@ class Config:
     def __init__(
             self,
             game_title: str,
+            window_size: tuple[int, int],
             font: pygame.font.Font,
             languages: _typ.Iterable[i18n.Language],
             bgm_volume: int,
@@ -46,9 +59,12 @@ class Config:
             sfx_volume: int,
             master_volume: int,
             always_run: bool,
+            selected_language: str = None,
             debug: bool = False
     ):
+        self._logger = logging.getLogger('Config')
         self._game_title = game_title
+        self._window_size = (min(window_size[0], 800), min(window_size[1], 600))
         self._font = font
         self._languages = {lang.code: lang for lang in languages}
         self._bgm_volume = maths.clamp(bgm_volume, 0, 100)
@@ -57,7 +73,11 @@ class Config:
         self._master_volume = maths.clamp(master_volume, 0, 100)
         self.always_run = always_run
         self._debug = debug
-        self._active_language = next(iter(languages))
+        self._active_language: i18n.Language | None = self._languages.get(selected_language)
+
+    @property
+    def window_size(self) -> tuple[int, int]:
+        return self._window_size
 
     @property
     def bg_music_volume(self) -> int:
@@ -104,7 +124,7 @@ class Config:
         return set(self._languages.values())
 
     @property
-    def active_language(self) -> i18n.Language:
+    def active_language(self) -> i18n.Language | None:
         return self._active_language
 
     def set_active_language(self, code: str):
@@ -117,16 +137,18 @@ class Config:
         return self._debug
 
     def save(self):
-        cp = _cp.ConfigParser()
-        cp.add_section('Sound')
+        self._logger.info('Saving config…')
+        cp = _get_settings_parser()
+        if self._active_language:
+            cp['UI']['language'] = self._active_language.code
         cp['Sound']['bgm_volume'] = str(self.bg_music_volume)
         cp['Sound']['bgs_volume'] = str(self.bg_sounds_volume)
         cp['Sound']['sfx_volume'] = str(self.sound_effects_volume)
         cp['Sound']['master_volume'] = str(self.master_volume)
-        cp.add_section('Gameplay')
         cp['Gameplay']['always_run'] = str(self.always_run).lower()
         with constants.SETTINGS_FILE.open(mode='w', encoding='UTF-8') as f:
             cp.write(f)
+        self._logger.info('Done.')
 
     def __repr__(self):
         return (f'Config[game_title={self.game_title},font={self.font},active_language={self.active_language},'
