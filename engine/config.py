@@ -23,10 +23,10 @@ def load_config() -> Config:
         game_title=game_config_parser.get('Game', 'title', fallback='Game'),
         font=font,
         languages=list(map(i18n.Language, constants.LANGS_DIR.glob('*.json'))),
-        bgm_volume=settings_parser.getint('Volume', 'bgm', fallback=100),
-        bgs_volume=settings_parser.getint('Volume', 'bgs', fallback=100),
-        menu_volume=settings_parser.getint('Volume', 'menu', fallback=100),
-        master_volume=settings_parser.getint('Volume', 'master', fallback=100),
+        bgm_volume=settings_parser.getint('Sound', 'bgm_volume', fallback=100),
+        bgs_volume=settings_parser.getint('Sound', 'bgs_volume', fallback=100),
+        sfx_volume=settings_parser.getint('Sound', 'sfx_volume', fallback=100),
+        master_volume=settings_parser.getint('Sound', 'master_volume', fallback=100),
         always_run=settings_parser.getboolean('Gameplay', 'always_run', fallback=False),
         debug=game_config_parser.getboolean('Game', 'debug', fallback=False)
     )
@@ -43,7 +43,7 @@ class Config:
             languages: _typ.Iterable[i18n.Language],
             bgm_volume: int,
             bgs_volume: int,
-            menu_volume: int,
+            sfx_volume: int,
             master_volume: int,
             always_run: bool,
             debug: bool = False
@@ -53,35 +53,35 @@ class Config:
         self._languages = {lang.code: lang for lang in languages}
         self._bgm_volume = maths.clamp(bgm_volume, 0, 100)
         self._bgs_volume = maths.clamp(bgs_volume, 0, 100)
-        self._menu_volume = maths.clamp(menu_volume, 0, 100)
+        self._sfx_volume = maths.clamp(sfx_volume, 0, 100)
         self._master_volume = maths.clamp(master_volume, 0, 100)
         self.always_run = always_run
         self._debug = debug
         self._active_language = next(iter(languages))
 
     @property
-    def bgm_volume(self) -> int:
+    def bg_music_volume(self) -> int:
         return self._bgm_volume
 
-    @bgm_volume.setter
-    def bgm_volume(self, value: int):
+    @bg_music_volume.setter
+    def bg_music_volume(self, value: int):
         self._bgm_volume = maths.clamp(value, 0, 100)
 
     @property
-    def bgs_volume(self) -> int:
+    def bg_sounds_volume(self) -> int:
         return self._bgs_volume
 
-    @bgs_volume.setter
-    def bgs_volume(self, value: int):
+    @bg_sounds_volume.setter
+    def bg_sounds_volume(self, value: int):
         self._bgs_volume = maths.clamp(value, 0, 100)
 
     @property
-    def menu_volume(self) -> int:
-        return self._menu_volume
+    def sound_effects_volume(self) -> int:
+        return self._sfx_volume
 
-    @menu_volume.setter
-    def menu_volume(self, value: int):
-        self._menu_volume = maths.clamp(value, 0, 100)
+    @sound_effects_volume.setter
+    def sound_effects_volume(self, value: int):
+        self._sfx_volume = maths.clamp(value, 0, 100)
 
     @property
     def master_volume(self) -> int:
@@ -118,11 +118,11 @@ class Config:
 
     def save(self):
         cp = _cp.ConfigParser()
-        cp.add_section('Volume')
-        cp['Volume']['bgm'] = str(self.bgm_volume)
-        cp['Volume']['bgs'] = str(self.bgs_volume)
-        cp['Volume']['menu'] = str(self.menu_volume)
-        cp['Volume']['master'] = str(self.master_volume)
+        cp.add_section('Sound')
+        cp['Volume']['bgm_volume'] = str(self.bg_music_volume)
+        cp['Volume']['bgs_volume'] = str(self.bg_sounds_volume)
+        cp['Volume']['sfx_volume'] = str(self.sound_effects_volume)
+        cp['Volume']['master_volume'] = str(self.master_volume)
         cp.add_section('Gameplay')
         cp['Gameplay']['always_run'] = str(self.always_run).lower()
         with constants.SETTINGS_FILE.open(mode='w', encoding='UTF-8') as f:
@@ -130,6 +130,6 @@ class Config:
 
     def __repr__(self):
         return (f'Config[game_title={self.game_title},font={self.font},active_language={self.active_language},'
-                f'bgm_volume={self.bgm_volume},bgs_volume={self.bgs_volume},menu_volume={self.menu_volume},'
-                f'master_volume={self.master_volume},always_run={self.always_run},'
-                f'languages=[{",".join(map(str, self._languages.values()))}]')
+                f'bgm_volume={self.bg_music_volume},bgs_volume={self.bg_sounds_volume},'
+                f'sfx_volume={self.sound_effects_volume},master_volume={self.master_volume},'
+                f'always_run={self.always_run},languages=[{",".join(map(str, self._languages.values()))}]')

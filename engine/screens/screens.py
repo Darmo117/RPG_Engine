@@ -181,13 +181,13 @@ class SettingsScreen(Screen):
             self._on_off_label(self._config.always_run), self._on_always_run))
         menu.add_item(components.Button(
             tm, lang.translate(f'screen.settings.menu.bgm_volume'), 'bgm_volume', percent_format,
-            self._config.bgm_volume, self._on_bgm_volume))
+            self._config.bg_music_volume, self._on_bgm_volume))
         menu.add_item(components.Button(
             tm, lang.translate(f'screen.settings.menu.bgs_volume'), 'bgs_volume', percent_format,
-            self._config.bgs_volume, self._on_bgs_volume))
+            self._config.bg_sounds_volume, self._on_bgs_volume))
         menu.add_item(components.Button(
             tm, lang.translate(f'screen.settings.menu.menu_volume'), 'menu_volume', percent_format,
-            self._config.menu_volume, self._on_menu_volume))
+            self._config.sound_effects_volume, self._on_menu_volume))
         menu.add_item(components.Button(
             tm, lang.translate(f'screen.settings.menu.master_volume'), 'master_volume', percent_format,
             self._config.master_volume, self._on_master_volume))
@@ -207,19 +207,19 @@ class SettingsScreen(Screen):
         self._fire_screen_event(KeyboardConfigScreen(self._game_engine, self))
 
     def _on_bgm_volume(self, button: components.Button):
-        self._config.bgm_volume = self._cycle_sound(self._config.bgm_volume)
+        self._config.bg_music_volume = self._cycle_sound(self._config.bg_music_volume)
         self._config.save()
-        button.data = self._config.bgm_volume
+        button.data = self._config.bg_music_volume
 
     def _on_bgs_volume(self, button: components.Button):
-        self._config.bgs_volume = self._cycle_sound(self._config.bgs_volume)
+        self._config.bg_sounds_volume = self._cycle_sound(self._config.bg_sounds_volume)
         self._config.save()
-        button.data = self._config.bgs_volume
+        button.data = self._config.bg_sounds_volume
 
     def _on_menu_volume(self, button: components.Button):
-        self._config.menu_volume = self._cycle_sound(self._config.menu_volume)
+        self._config.sound_effects_volume = self._cycle_sound(self._config.sound_effects_volume)
         self._config.save()
-        button.data = self._config.menu_volume
+        button.data = self._config.sound_effects_volume
 
     def _on_master_volume(self, button: components.Button):
         self._config.master_volume = self._cycle_sound(self._config.master_volume)
