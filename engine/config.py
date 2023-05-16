@@ -119,10 +119,10 @@ class Config:
     def save(self):
         cp = _cp.ConfigParser()
         cp.add_section('Sound')
-        cp['Volume']['bgm_volume'] = str(self.bg_music_volume)
-        cp['Volume']['bgs_volume'] = str(self.bg_sounds_volume)
-        cp['Volume']['sfx_volume'] = str(self.sound_effects_volume)
-        cp['Volume']['master_volume'] = str(self.master_volume)
+        cp['Sound']['bgm_volume'] = str(self.bg_music_volume)
+        cp['Sound']['bgs_volume'] = str(self.bg_sounds_volume)
+        cp['Sound']['sfx_volume'] = str(self.sound_effects_volume)
+        cp['Sound']['master_volume'] = str(self.master_volume)
         cp.add_section('Gameplay')
         cp['Gameplay']['always_run'] = str(self.always_run).lower()
         with constants.SETTINGS_FILE.open(mode='w', encoding='UTF-8') as f:
