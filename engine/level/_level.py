@@ -8,9 +8,9 @@ import typing as _typ
 import pygame
 
 from . import interactions as inter
-from .. import constants, entities, events, io, render, scene
+from .. import config, constants, entities, events, io, scene
 from ..render import util as _rutil
-from ..screens import components as _comp, texts, screens
+from ..screens import components as _comp, screens, texts
 
 
 class LevelLoader:
@@ -114,8 +114,7 @@ class Level(scene.Scene):
         :param entity_layer: Index of the layer on which to render entities.
         :param bg_color: The background color.
         """
-        super().__init__()
-        self._game_engine = game_engine
+        super().__init__(game_engine)
         self._width = width
         self._height = height
         self._tiles = tiles
@@ -129,18 +128,11 @@ class Level(scene.Scene):
         self._entities: set[entities.Entity] = set()
 
         self._title_label = _LevelNameLabel(
-            game_engine.texture_manager,
+            game_engine,
             game_engine.config.active_language.translate(f'user_generated.level.{name}.name')
         )
         self._title_label.x = 6
         self._title_label.y = 12
-
-    @property
-    def game_engine(self):
-        """The game engine.
-
-        :rtype: engine.game_engine.GameEngine"""
-        return self._game_engine
 
     def spawn_player(self, at: pygame.Vector2):
         if self._player:
@@ -155,7 +147,9 @@ class Level(scene.Scene):
         self._entities.add(entity)
 
     def on_input_event(self, event: pygame.event.Event):
-        if not super().on_input_event(event) and event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+        if (not super().on_input_event(event)
+                and event.type == pygame.KEYDOWN
+                and event.key in self._get_keys(config.InputConfig.ACTION_CANCEL_MENU)):
             # TODO display menu
             self._game_engine.fire_event(events.GoToScreenEvent(screens.TitleScreen(self._game_engine)))
             return True
@@ -169,14 +163,13 @@ class Level(scene.Scene):
         self._title_label.update()
 
     def _poll_events(self):
-        up, down, left, right = io.are_keys_pressed(pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT)
-        if up:
+        if io.is_any_key_pressed(*self._get_keys(config.InputConfig.ACTION_UP)):
             self._player.go_up()
-        elif down:
+        elif io.is_any_key_pressed(*self._get_keys(config.InputConfig.ACTION_DOWN)):
             self._player.go_down()
-        if left:
+        if io.is_any_key_pressed(*self._get_keys(config.InputConfig.ACTION_LEFT)):
             self._player.go_left()
-        elif right:
+        elif io.is_any_key_pressed(*self._get_keys(config.InputConfig.ACTION_RIGHT)):
             self._player.go_right()
 
     def _update_camera_position(self):
@@ -241,13 +234,19 @@ class Level(scene.Scene):
 
 
 class _LevelNameLabel(_comp.Component):
-    def __init__(self, texture_manager: render.TexturesManager, title: str):
-        super().__init__(texture_manager)
+    def __init__(self, game_engine, title: str):
+        """Create a level label.
+
+        :param game_engine: The game engine.
+        :type game_engine: engine.game_engine.GameEngine
+        :param title: Level’s title.
+        """
+        super().__init__(game_engine)
         self._label = texts.parse_line(title)
         self._gradient_width = 30
         self._title_timer = None
         self._visible = False
-        self.w, self.h = self._label.get_size(texture_manager)
+        self.w, self.h = self._label.get_size(self._tm)
         self._update_image()
 
     @property

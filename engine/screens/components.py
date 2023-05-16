@@ -6,15 +6,22 @@ import typing as _typ
 
 import pygame
 
-from .. import render
 from . import texts
+from .. import config, render
 
 
 class Component(abc.ABC):
     """Base class for graphical components."""
 
-    def __init__(self, texture_manager: render.TexturesManager, padding: int = 0):
-        self._tm = texture_manager
+    def __init__(self, game_engine, padding: int = 0):
+        """Create a component.
+
+        :param game_engine: The game engine.
+        :type game_engine: engine.game_engine.GameEngine
+        :param padding: The space around the component’s contents.
+        """
+        self._game_engine = game_engine
+        self._tm: render.TexturesManager = game_engine.texture_manager
         self.x = 0
         self.y = 0
         self._w = 0
@@ -58,6 +65,9 @@ class Component(abc.ABC):
 
     def _on_enable_changed(self):
         pass
+
+    def _get_keys(self, action: str) -> tuple[int, ...]:
+        return self._game_engine.config.inputs.get_keys(action)
 
     def on_event(self, event: pygame.event.Event) -> bool:
         return False
@@ -133,10 +143,21 @@ class Component(abc.ABC):
 
 
 class Button(Component):
-    def __init__(self, texture_manager: render.TexturesManager, label: str, name: str,
+    def __init__(self, game_engine, label: str, name: str,
                  data_label_format: str | _typ.Callable[[_typ.Any], str] = None, data=None,
                  action: _typ.Callable[[Button], None] = None, enabled: bool = True):
-        super().__init__(texture_manager, padding=5)
+        """Create a button.
+
+        :param game_engine: The game engine.
+        :type game_engine: engine.game_engine.GameEngine
+        :param label: Button’s label.
+        :param name: Button’s internal name.
+        :param data_label_format: Optional format string/function to render the button’s data.
+        :param data: Optional button data.
+        :param action: Action to execute when this button is activated.
+        :param enabled: Whether this button should respond to inputs.
+        """
+        super().__init__(game_engine, padding=5)
         self._raw_label = label
         self._name = name
         self._data_label_format = data_label_format
@@ -144,9 +165,9 @@ class Button(Component):
         self._action = action
         self._enabled = enabled
         self._selected = False
-        text_size = texts.parse_line(label).get_size(texture_manager)
+        text_size = texts.parse_line(label).get_size(self._tm)
         if self._data_label_format:
-            data_text_size = texts.parse_line(self._get_data_label()).get_size(texture_manager)
+            data_text_size = texts.parse_line(self._get_data_label()).get_size(self._tm)
             self.w, self.h = text_size[0] + data_text_size[0] + 2 * self._padding, max(text_size[1], data_text_size[1])
         else:
             self.w, self.h = text_size
@@ -240,9 +261,17 @@ class Menu(Component):
     HORIZONTAL = 0
     VERTICAL = 1
 
-    def __init__(self, texture_manager: render.TexturesManager,
-                 rows: int, columns: int, layout: int = HORIZONTAL, gap: int = 5):
-        super().__init__(texture_manager, padding=10)
+    def __init__(self, game_engine, rows: int, columns: int, layout: int = HORIZONTAL, gap: int = 5):
+        """Create an empty menu.
+
+        :param game_engine: The game engine.
+        :type game_engine: engine.game_engine.GameEngine
+        :param rows: Number of rows in the menu’s grid.
+        :param columns: Number of columns in the menu’s grid.
+        :param layout: How the components will be added to the menu.
+        :param gap: Spacing between each component in the grid.
+        """
+        super().__init__(game_engine, padding=10)
         self._grid_width = columns
         self._grid_height = rows
         self._row_heights = [0] * self._grid_height
@@ -314,25 +343,25 @@ class Menu(Component):
                 if self._buttons_nb > 0:
                     r, c = self._selection
                     while not self._select_button(r, c):
-                        if key == pygame.K_RIGHT:
+                        if key in self._get_keys(config.InputConfig.ACTION_RIGHT):
                             if self._selection[1] == self._grid_width - 1:
                                 r = (r + 1) % self._grid_height
                                 c = 0
                             else:
                                 c += 1
-                        elif key == pygame.K_LEFT:
+                        elif key in self._get_keys(config.InputConfig.ACTION_LEFT):
                             if self._selection[1] == 0:
                                 r = (r - 1) % self._grid_height
                                 c = self._grid_width - 1
                             else:
                                 c -= 1
-                        elif key == pygame.K_DOWN:
+                        elif key in self._get_keys(config.InputConfig.ACTION_DOWN):
                             if self._selection[0] == self._grid_height - 1:
                                 r = 0
                                 c = (c + 1) % self._grid_width
                             else:
                                 r += 1
-                        elif key == pygame.K_UP:
+                        elif key in self._get_keys(config.InputConfig.ACTION_UP):
                             if self._selection[0] == 0:
                                 r = self._grid_height - 1
                                 c = (c - 1) % self._grid_width
@@ -340,7 +369,7 @@ class Menu(Component):
                                 r -= 1
                     return True
 
-            elif key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            elif key in self._get_keys(config.InputConfig.ACTION_OK_INTERACT):
                 self._get_button(*self._selection).on_action()
                 return True
 
@@ -370,8 +399,14 @@ class Menu(Component):
 
 
 class TextArea(Component):
-    def __init__(self, texture_manager: render.TexturesManager, text: str):
-        super().__init__(texture_manager, padding=10)
+    def __init__(self, game_engine, text: str):
+        """Create a text area.
+
+        :param game_engine: The game engine.
+        :type game_engine: engine.game_engine.GameEngine
+        :param text: Component’s text.
+        """
+        super().__init__(game_engine, padding=10)
         self._raw_text = text
         self._text = texts.parse_lines(text)
 

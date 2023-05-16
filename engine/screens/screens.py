@@ -23,8 +23,7 @@ class Screen(scene.Scene, abc.ABC):
         :param parent: The screen that lead to this one.
         :param background_image: Path to the screen’s background image.
         """
-        super().__init__(parent)
-        self._game_engine = game_engine
+        super().__init__(game_engine, parent)
         self._bg_image = None
         if background_image:
             try:
@@ -46,7 +45,8 @@ class Screen(scene.Scene, abc.ABC):
 
     def on_input_event(self, event: pygame.event.Event):
         if not super().on_input_event(event):
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE and self.parent:
+            if (self.parent and event.type == pygame.KEYDOWN
+                    and event.key in self._get_keys(config.InputConfig.ACTION_CANCEL_MENU)):
                 self._fire_screen_event(self.parent)
                 return True
             for c in self._components:
@@ -81,10 +81,10 @@ class LanguageSelectScreen(Screen):
         """
         super().__init__(game_engine, parent, constants.BACKGROUNDS_DIR / 'title_screen.png')
         languages = self._game_engine.config.languages
-        menu = self._add_component(components.Menu(self._game_engine.texture_manager, len(languages), 1))
+        menu = self._add_component(components.Menu(self._game_engine, len(languages), 1))
         for i, language in enumerate(sorted(languages, key=lambda l: l.name)):
             button = components.Button(
-                self._game_engine.texture_manager,
+                self._game_engine,
                 language.name,
                 language.code,
                 action=self._on_language_selected
@@ -108,20 +108,20 @@ class TitleScreen(Screen):
         :param parent: The screen that lead to this one.
         """
         super().__init__(game_engine, parent, constants.BACKGROUNDS_DIR / 'title_screen.png')
-        tm = self._game_engine.texture_manager
-        menu = self._add_component(components.Menu(tm, 5, 1))
+        ge = self._game_engine
+        menu = self._add_component(components.Menu(ge, 5, 1))
         lang = self._game_engine.config.active_language
         menu.add_item(components.Button(
-            tm, lang.translate('screen.title.menu.new_game'), 'new_game', action=self._on_new_game))
+            ge, lang.translate('screen.title.menu.new_game'), 'new_game', action=self._on_new_game))
         menu.add_item(components.Button(
-            tm, lang.translate('screen.title.menu.load_game'), 'load_game', action=self._on_load_game,
+            ge, lang.translate('screen.title.menu.load_game'), 'load_game', action=self._on_load_game,
             enabled=len(game_state.list_saves()) != 0))
         menu.add_item(components.Button(
-            tm, lang.translate('screen.title.menu.settings'), 'settings', action=self._on_settings))
+            ge, lang.translate('screen.title.menu.settings'), 'settings', action=self._on_settings))
         menu.add_item(components.Button(
-            tm, lang.translate('screen.title.menu.credits'), 'credits', action=self._on_credits))
+            ge, lang.translate('screen.title.menu.credits'), 'credits', action=self._on_credits))
         menu.add_item(components.Button(
-            tm, lang.translate('screen.title.menu.quit_game'), 'quit_game', action=self._on_quit_game))
+            ge, lang.translate('screen.title.menu.quit_game'), 'quit_game', action=self._on_quit_game))
         w, h = self._game_engine.window_size
         menu.x = (w - menu.size[0]) / 2
         menu.y = 2 * (h - menu.size[1]) / 3
@@ -172,30 +172,30 @@ class SettingsScreen(Screen):
         """
         super().__init__(game_engine, parent, constants.BACKGROUNDS_DIR / 'settings_screen.png')
         self._config = self._game_engine.config
-        tm = self._game_engine.texture_manager
-        menu = self._add_component(components.Menu(tm, 7, 1))
+        ge = self._game_engine
+        menu = self._add_component(components.Menu(ge, 7, 1))
         lang = self._config.active_language
         percent_format = lang.translate('menu.label.percent_format')
         menu.add_item(components.Button(
-            tm, lang.translate('screen.settings.menu.keyboard_config'), 'keyboard_config',
+            ge, lang.translate('screen.settings.menu.keyboard_config'), 'keyboard_config',
             action=self._on_keyboard_config, enabled=False))
         menu.add_item(components.Button(
-            tm, lang.translate('screen.settings.menu.language'), 'language', lambda l: l.name,
+            ge, lang.translate('screen.settings.menu.language'), 'language', lambda l: l.name,
             self._config.active_language, self._on_language, enabled=len(self._config.languages) > 1))
         menu.add_item(components.Button(
-            tm, lang.translate('screen.settings.menu.always_run'), 'always_run', '{}',
+            ge, lang.translate('screen.settings.menu.always_run'), 'always_run', '{}',
             self._on_off_label(self._config.always_run), self._on_always_run))
         menu.add_item(components.Button(
-            tm, lang.translate(f'screen.settings.menu.bgm_volume'), 'bgm_volume', percent_format,
+            ge, lang.translate(f'screen.settings.menu.bgm_volume'), 'bgm_volume', percent_format,
             self._config.bg_music_volume, self._on_bgm_volume))
         menu.add_item(components.Button(
-            tm, lang.translate(f'screen.settings.menu.bgs_volume'), 'bgs_volume', percent_format,
+            ge, lang.translate(f'screen.settings.menu.bgs_volume'), 'bgs_volume', percent_format,
             self._config.bg_sounds_volume, self._on_bgs_volume))
         menu.add_item(components.Button(
-            tm, lang.translate(f'screen.settings.menu.sfx_volume'), 'sfx_volume', percent_format,
+            ge, lang.translate(f'screen.settings.menu.sfx_volume'), 'sfx_volume', percent_format,
             self._config.sound_effects_volume, self._on_menu_volume))
         menu.add_item(components.Button(
-            tm, lang.translate(f'screen.settings.menu.master_volume'), 'master_volume', percent_format,
+            ge, lang.translate(f'screen.settings.menu.master_volume'), 'master_volume', percent_format,
             self._config.master_volume, self._on_master_volume))
         w, h = self._game_engine.window_size
         menu.x = (w - menu.size[0]) / 2
@@ -259,7 +259,7 @@ class CreditsScreen(Screen):
             text = text.replace('${game_title}', self._game_engine.config.game_title)
         except FileNotFoundError:
             text = 'Missing credits file!'
-        text_area = self._add_component(components.TextArea(self._game_engine.texture_manager, text))
+        text_area = self._add_component(components.TextArea(self._game_engine, text))
         w, h = self._game_engine.window_size
         text_area.w = math.floor(w * 0.8)
         text_area.h = math.floor(h * 0.8)
