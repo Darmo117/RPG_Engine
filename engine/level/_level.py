@@ -155,11 +155,11 @@ class Level(scene.Scene):
         self._entities.add(entity)
 
     def on_input_event(self, event: pygame.event.Event):
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+        if not super().on_input_event(event) and event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             # TODO display menu
             self._game_engine.fire_event(events.GoToScreenEvent(screens.TitleScreen(self._game_engine)))
-        else:
-            super().on_input_event(event)
+            return True
+        return False
 
     def update(self):
         super().update()

@@ -19,12 +19,13 @@ class Scene(abc.ABC):
     def parent(self) -> Scene:
         return self._parent
 
-    def on_input_event(self, event: pygame.event.Event):
+    def on_input_event(self, event: pygame.event.Event) -> bool:
         """Called when an input event occurs.
 
         :param event: The event.
+        :return: True if the event has been processed and should be further ignored, false otherwise.
         """
-        pass
+        return False
 
     def update(self):
         """Update this scene."""

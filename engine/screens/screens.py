@@ -45,12 +45,14 @@ class Screen(scene.Scene, abc.ABC):
         return component
 
     def on_input_event(self, event: pygame.event.Event):
-        super().on_input_event(event)
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE and self.parent:
-            self._fire_screen_event(self.parent)
-        else:
+        if not super().on_input_event(event):
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE and self.parent:
+                self._fire_screen_event(self.parent)
+                return True
             for c in self._components:
-                c.on_event(event)
+                if c.on_event(event):
+                    break
+        return False
 
     def update(self):
         super().update()

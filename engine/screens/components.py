@@ -59,8 +59,8 @@ class Component(abc.ABC):
     def _on_enable_changed(self):
         pass
 
-    def on_event(self, event: pygame.event.Event):
-        pass
+    def on_event(self, event: pygame.event.Event) -> bool:
+        return False
 
     def update(self):
         """Update this component."""
@@ -300,6 +300,9 @@ class Menu(Component):
             y += self._row_heights[r] + self._gap
 
     def on_event(self, event: pygame.event.Event):
+        if super().on_event(event):
+            return True
+
         if self._selection and event.type == pygame.KEYDOWN:
             key = event.key
             if key in (pygame.K_RIGHT, pygame.K_LEFT, pygame.K_DOWN, pygame.K_UP):
@@ -330,9 +333,13 @@ class Menu(Component):
                                 c = (c - 1) % self._grid_width
                             else:
                                 r -= 1
+                    return True
 
             elif key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 self._get_button(*self._selection).on_action()
+                return True
+
+        return False
 
     def _select_button(self, row: int, col: int) -> bool:
         position = row, col
