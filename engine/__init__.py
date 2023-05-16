@@ -1,1 +1,1 @@
-from .game_engine import *
+from .game_engine import run

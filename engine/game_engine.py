@@ -10,9 +10,20 @@ from . import config, constants, errors, events, level, maths, render, scene as 
 from .screens import screens
 
 
+def run(*argv: str) -> int:
+    try:
+        return GameEngine(argv).run()
+    except BaseException as e:
+        print(_generate_crash_report(e), file=sys.stderr)
+        return 1
+
+
 class GameEngine:
-    def __init__(self):
-        self._logger = logging.getLogger('GameEngine')
+    NAME = 'RPG Engine'
+    VERSION = '1.0'
+
+    def __init__(self, argv: tuple[str]):
+        self._logger = logging.getLogger(self.NAME)
         pygame.init()
         self._screen = pygame.display.set_mode((constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT))
         self._config = config.load_config()
@@ -71,16 +82,7 @@ class GameEngine:
             self._loop()
             return 0
         except BaseException as e:
-            name = type(e).__name__
-            tb = ''.join(traceback.format_tb(e.__traceback__))
-            message = f'{name}: {e}\n{tb}'
-            self._logger.error(message)
-            date = datetime.datetime.now().replace(microsecond=0)
-            crash_date = str(date).replace(' ', '_').replace(':', '-')
-            if not constants.LOGS_DIR.exists():
-                constants.LOGS_DIR.mkdir(parents=True)
-            with (constants.LOGS_DIR / f'crash_report_{crash_date}.log').open(mode='w', encoding='UTF-8') as f:
-                f.write(message)
+            self._logger.error(_generate_crash_report(e, scene=self.active_scene))
             return 1
         finally:
             pygame.quit()
@@ -210,6 +212,33 @@ class _SceneTransition:
         screen.blit(surface, (0, 0))
 
 
+def _generate_crash_report(e: BaseException, scene: scene_.Scene = None) -> str:
+    tb = ''.join(traceback.format_tb(e.__traceback__))
+    date = datetime.datetime.now()
+    message = f"""\
+--- {GameEngine.NAME} Crash Report ---
+
+Engine version: {GameEngine.VERSION}
+Time: {date.strftime("%Y-%m-%d %H:%M:%S")}
+Description: {e} 
+
+{e.__class__.__name__}: {e}
+{tb}
+"""
+    if scene:
+        message += f"""\
+-- Affected Scene --
+Type: {scene.__module__}.{scene.__class__.__qualname__}
+"""
+    if not constants.LOGS_DIR.exists():
+        constants.LOGS_DIR.mkdir(parents=True)
+    crash_date = date.strftime('%Y-%m-%d_%H.%M.%S')
+    with (constants.LOGS_DIR / f'crash_report_{crash_date}.log').open(mode='w', encoding='UTF-8') as f:
+        f.write(message)
+    return message
+
+
 __all__ = [
+    'run',
     'GameEngine',
 ]

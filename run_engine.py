@@ -1,5 +1,5 @@
 import sys
 
-from engine import GameEngine
+import engine
 
-sys.exit(GameEngine().run())
+sys.exit(engine.run(*sys.argv))
