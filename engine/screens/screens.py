@@ -51,7 +51,7 @@ class Screen(scene.Scene, abc.ABC):
                 return True
             for c in self._components:
                 if c.on_event(event):
-                    break
+                    return True
         return False
 
     def update(self):
