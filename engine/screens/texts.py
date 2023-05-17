@@ -12,7 +12,8 @@ BOLD_TOKEN = 'b'
 UNDERLINE_TOKEN = 'u'
 STRIKETHROUGH_TOKEN = 's'
 COLOR_TOKEN = 'c'
-COLOR_PATTERN = re.compile(r'#([\da-fA-F]{2})([\da-fA-F]{2})([\da-fA-F]{2}) ')
+COLOR_PATTERN = re.compile(r'#([\da-fA-F]{2})([\da-fA-F]{2})([\da-fA-F]{2})')
+COLOR_TOKEN_LENGTH = len('#000000')
 
 
 def parse_lines(text: str) -> list[Text]:
@@ -89,7 +90,7 @@ def parse_line(text: str) -> Text:
                 append_buffer_to_line(style)
                 buffer = ''
         elif color_mode:
-            if len(color_buffer) < 8:
+            if len(color_buffer) < COLOR_TOKEN_LENGTH:
                 color_buffer += c
             else:
                 color_mode = False
