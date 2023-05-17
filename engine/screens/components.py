@@ -216,7 +216,7 @@ class Button(Component):
         self._update_image()
 
     def on_action(self):
-        if self._enabled:
+        if self._enabled and self._action:
             self._action(self)
 
     def _draw(self) -> pygame.Surface:
