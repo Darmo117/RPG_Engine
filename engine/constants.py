@@ -1,6 +1,6 @@
 import pathlib
 
-SCALE = 1
+SCALE = 1.5
 TILE_SIZE = 32
 SCREEN_TILE_SIZE = TILE_SIZE * SCALE
 

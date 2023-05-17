@@ -103,8 +103,7 @@ class TexturesManager:
     def get_menu_texture(self, position: tuple[int, int], size: tuple[int, int]) -> pygame.Surface:
         image = pygame.Surface(size, pygame.SRCALPHA).convert_alpha()
         image.blit(self._menu_box_texture, (0, 0), (*position, *size))
-        scale = constants.SCALE
-        return pygame.transform.scale(image, (size[0] * scale, size[1] * scale))
+        return pygame.transform.scale(image, size)
 
     def _get_texture(self, index: int, sheet: pygame.Surface, size: tuple[int, int]) -> pygame.Surface:
         image = pygame.Surface(size, pygame.SRCALPHA).convert_alpha()
