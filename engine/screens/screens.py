@@ -160,7 +160,7 @@ class LoadGameScreen(Screen):
         # TODO menu
 
 
-class SettingsScreen(Screen):  # TODO go to new title screen on cancel if language has changed
+class SettingsScreen(Screen):
     VOLUME_STEP = 20
 
     def __init__(self, game_engine, parent: Screen = None):
@@ -172,6 +172,7 @@ class SettingsScreen(Screen):  # TODO go to new title screen on cancel if langua
         """
         super().__init__(game_engine, parent, constants.BACKGROUNDS_DIR / 'settings_screen.png')
         self._config = self._game_engine.config
+        self._language = self._config.active_language
         ge = self._game_engine
         menu = self._add_component(components.Menu(ge, 7, 1))
         lang = self._config.active_language
@@ -241,6 +242,14 @@ class SettingsScreen(Screen):  # TODO go to new title screen on cancel if langua
 
     def _cycle_sound(self, volume: int) -> int:
         return (volume + self.VOLUME_STEP) % (config.Config.MAX_VOLUME + self.VOLUME_STEP)
+
+    def on_input_event(self, event: pygame.event.Event):
+        if (self._language is not self._config.active_language and event.type == pygame.KEYDOWN
+                and event.key in self._get_keys(config.InputConfig.ACTION_CANCEL_MENU)):
+            # Reset to title screen if language has changed
+            self._fire_screen_event(TitleScreen(self._game_engine))
+            return True
+        return super().on_input_event(event)
 
 
 class CreditsScreen(Screen):
