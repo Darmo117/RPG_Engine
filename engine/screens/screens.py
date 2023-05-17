@@ -265,7 +265,7 @@ class CreditsScreen(Screen):
         super().__init__(game_engine, parent, constants.BACKGROUNDS_DIR / 'credits_screen.png')
         lang = self._game_engine.config.active_language
         try:
-            with (constants.LANGS_DIR / f'credits-{lang.code}.txt').open(mode='r', encoding='UTF-8') as f:
+            with (constants.DATA_DIR / f'credits-{lang.code}.txt').open(mode='r', encoding='UTF-8') as f:
                 text = f.read()
             text = text.replace('${game_title}', self._game_engine.config.game_title)
         except FileNotFoundError:
@@ -278,7 +278,7 @@ class CreditsScreen(Screen):
         text_area.set_center()
 
 
-class KeyboardSettingsScreen(Screen):  # TODO apply changes only when user activates confirm button to avoid confusion
+class KeyboardSettingsScreen(Screen):
     def __init__(self, game_engine, parent: Screen = None):
         """Create a screen to change keyboard settings.
 

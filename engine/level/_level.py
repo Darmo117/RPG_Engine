@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import gzip
+import json
 import time
 import typing as _typ
 
@@ -21,8 +22,13 @@ class LevelLoader:
         :type engine: engine.game_engine.GameEngine
         """
         self._engine = engine
+        with (constants.DATA_DIR / 'maps.json').open(mode='r', encoding='UTF-8') as f:
+            self._levels_data = json.load(f)
 
     def load_level(self, name: str) -> Level:
+        if name not in self._levels_data:
+            raise KeyError(f'no map with name "{name}"')
+
         with gzip.open(constants.MAPS_DIR / f'{name}.map', mode='rb') as f:
             buffer = io.ByteBuffer(f.read())
         version = buffer.read_int(signed=False)  # Future-proofing
@@ -40,7 +46,7 @@ class LevelLoader:
         interactions = self._load_interactions(buffer, width, height)
         return Level(
             self._engine,
-            name,
+            self._levels_data[name],
             width,
             height,
             tiles,
@@ -94,7 +100,7 @@ class LevelLoader:
 class Level(scene.Scene):
     def __init__(self,
                  game_engine,
-                 name: str,
+                 data: dict,
                  width: int,
                  height: int,
                  tiles: list[list[list[Tile]]],
@@ -106,7 +112,7 @@ class Level(scene.Scene):
 
         :param game_engine: The game engine.
         :type game_engine: engine.game_engine.GameEngine
-        :param name: Level’s internal name.
+        :param data: Level’s data.
         :param width: Level’s horizontal size.
         :param height: Level’s vertical size.
         :param tiles: List of tile layers.
@@ -115,6 +121,7 @@ class Level(scene.Scene):
         :param bg_color: The background color.
         """
         super().__init__(game_engine)
+        self._data = data
         self._width = width
         self._height = height
         self._tiles = tiles
@@ -122,14 +129,13 @@ class Level(scene.Scene):
         self._entity_layer = entity_layer
         self._background_color = bg_color
         self._camera_pos = pygame.Vector2()
-        self._controls_enabled = True
 
         self._player = None
         self._entities: set[entities.Entity] = set()
 
         self._title_label = _LevelNameLabel(
             game_engine,
-            game_engine.config.active_language.translate(f'user_generated.level.{name}.name')
+            self._data['name'][game_engine.config.active_language.code],
         )
         self._title_label.x = 6
         self._title_label.y = 12

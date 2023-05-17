@@ -30,8 +30,7 @@ def load_config(debug: bool = False) -> Config:
         int(font_settings['size'])
     )
     w, h = json_data['screen_size']
-
-    languages = list(map(i18n.Language, constants.LANGS_DIR.glob('*.json')))
+    languages = [i18n.Language(constants.LANGS_DIR / f'{lang}.json') for lang in json_data['available_languages']]
 
     settings_parser = _get_settings_parser()
     with constants.SETTINGS_FILE.open(mode='r', encoding='UTF-8') as f:
