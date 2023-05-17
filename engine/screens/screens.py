@@ -8,8 +8,8 @@ import typing as _typ
 
 import pygame
 
-from . import components
-from .. import config, constants, events, game_state, i18n, scene
+from . import components, texts
+from .. import config, constants, events, game_state, i18n, io, scene
 
 _C = _typ.TypeVar('_C', bound=components.Component)
 
@@ -160,7 +160,7 @@ class LoadGameScreen(Screen):
         # TODO menu
 
 
-class SettingsScreen(Screen):
+class SettingsScreen(Screen):  # TODO go to new title screen on cancel if language has changed
     VOLUME_STEP = 20
 
     def __init__(self, game_engine, parent: Screen = None):
@@ -177,8 +177,8 @@ class SettingsScreen(Screen):
         lang = self._config.active_language
         percent_format = lang.translate('menu.label.percent_format')
         menu.add_item(components.Button(
-            ge, lang.translate('screen.settings.menu.keyboard_config'), 'keyboard_config',
-            action=self._on_keyboard_config, enabled=False))
+            ge, lang.translate('screen.settings.menu.keyboard_settings'), 'keyboard_settings',
+            action=self._on_keyboard_settings))
         menu.add_item(components.Button(
             ge, lang.translate('screen.settings.menu.language'), 'language', lambda l: l.name,
             self._config.active_language, self._on_language, enabled=len(self._config.languages) > 1))
@@ -216,8 +216,8 @@ class SettingsScreen(Screen):
         self._config.save()
         button.data = self._on_off_label(self._config.always_run)
 
-    def _on_keyboard_config(self, _):
-        self._fire_screen_event(KeyboardConfigScreen(self._game_engine, self))
+    def _on_keyboard_settings(self, _):
+        self._fire_screen_event(KeyboardSettingsScreen(self._game_engine, self))
 
     def _on_bgm_volume(self, button: components.Button):
         self._config.bg_music_volume = self._cycle_sound(self._config.bg_music_volume)
@@ -245,7 +245,7 @@ class SettingsScreen(Screen):
 
 class CreditsScreen(Screen):
     def __init__(self, game_engine, parent: Screen = None):
-        """Create a screen change game’s settings.
+        """Create a screen to change game’s settings.
 
         :param game_engine: The game engine.
         :type game_engine: engine.game_engine.GameEngine
@@ -267,6 +267,140 @@ class CreditsScreen(Screen):
         text_area.y = (h - text_area.size[1]) / 2
 
 
+class KeyboardSettingsScreen(Screen):
+    def __init__(self, game_engine, parent: Screen = None):
+        """Create a screen to change keyboard settings.
+
+        :param game_engine: The game engine.
+        :type game_engine: engine.game_engine.GameEngine
+        :param parent: The screen that lead to this one.
+        """
+        super().__init__(game_engine, parent, constants.BACKGROUNDS_DIR / 'keyboard_settings_screen.png')
+        actions = config.InputConfig.ACTION_DEFAULTS.keys()
+        menu = self._add_component(components.Menu(game_engine, 2 * len(actions), 3, gap=0))
+        for action_name in actions:
+            translate = game_engine.config.active_language.translate
+            menu.add_item(components.Label(game_engine, '§b' + translate(f'input.{action_name}')))
+            for _ in range(menu.grid_width - 1):
+                menu.add_item(components.Spacer(game_engine))
+            inputs = game_engine.config.inputs.get_keys(action_name)
+            for i in range(menu.grid_width):
+                input_ = inputs[i] if i < len(inputs) else None
+                menu.add_item(components.Button(
+                    game_engine,
+                    '§u' + translate('screen.keyboard_settings.menu.key_name_format', id=i + 1),
+                    f'{actions}_{i + 1}',
+                    data_label_format=lambda data: '§c#00ff00' + io.get_key_name(data) if data is not None else '',
+                    data=input_
+                ))
+        menu.x = (game_engine.window_size[0] - menu.size[0]) / 2
+        menu.y = (game_engine.window_size[1] - menu.size[1]) / 2
+
+    class Keyboard(components.Menu):
+        # FIXME key codes are not bound to physical keys
+        def __init__(self, game_engine):
+            """Create a keyboard.
+
+            :param game_engine: The game engine.
+            :type game_engine: engine.game_engine.GameEngine
+            """
+            super().__init__(game_engine, 5, 23, gap=0)
+            size = (int((2 / 3 * game_engine.window_size[0]) / self._grid_width),
+                    int((1 / 3 * game_engine.window_size[1]) / self._grid_height))
+            self.w = self._grid_width * (size[0] + 10)
+            self.h = self._grid_height * (size[1] + 10)
+
+            # Row 1
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_ESCAPE, self._on_key_change, size))
+            self._spacer(size)
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F1, self._on_key_change, size))
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F2, self._on_key_change, size))
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F3, self._on_key_change, size))
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F4, self._on_key_change, size))
+            self._spacer(size)
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F5, self._on_key_change, size))
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F6, self._on_key_change, size))
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F7, self._on_key_change, size))
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F8, self._on_key_change, size))
+            self._spacer(size)
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F9, self._on_key_change, size))
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F10, self._on_key_change, size))
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F11, self._on_key_change, size))
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F12, self._on_key_change, size))
+            self._spacer(size)  # ScreenCap skipped
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_SCROLLLOCK, self._on_key_change, size))
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_PAUSE, self._on_key_change, size))
+            self._spacer(size)
+            self._spacer(size)
+            self._spacer(size)
+            self._spacer(size)
+
+            # Row 2
+            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_DOLLAR, self._on_key_change,
+                                                     (size[0] * 1.3, size[1])))
+
+        def _spacer(self, size: tuple[int, int]):
+            s = components.Spacer(self._game_engine, padding=5)
+            s.w, s.h = size
+            self.add_item(s)
+
+        def _update_size(self, row: int, col: int, new_component: components.Button | components.Spacer):
+            if col == 0:
+                new_component.x = self._padding
+            else:
+                prev_key = self._grid[row][col - 1]
+                new_component.x = prev_key.x + prev_key.size[0]
+            if row == 0:
+                new_component.y = self._padding
+            else:
+                above_key = self._grid[row - 1][col]
+                new_component.y = above_key.y + above_key.size[1]
+
+        def _on_key_change(self, button: components.Button):
+            pass  # TODO
+
+    class Key(components.Button):
+        def __init__(self, game_engine, key: int, action: _typ.Callable[[components.Button], None],
+                     size: tuple[float, float]):
+            """Create a keyboard key.
+
+            :param game_engine: The game engine.
+            :type game_engine: engine.game_engine.GameEngine
+            :param key: The keyboard key code this component corresponds to.
+            :param action: Action to execute when this button is activated.
+            :param size: Key’s size.
+            """
+
+            def format_(data):
+                if not data:
+                    return ''
+                return game_engine.config.active_language.translate(f'input.{data}')
+
+            super().__init__(
+                game_engine,
+                io.get_key_name(key),
+                str(key),
+                data_label_format=format_,
+                data=game_engine.config.inputs.get_action(key),
+                action=action
+            )
+            self.w, self.h = size
+
+        def _update_image(self):
+            tm = self._tm
+            self._image = pygame.Surface(self.size, pygame.SRCALPHA)
+            if self._selected:
+                color = (50, 50, 50)
+            else:
+                color = (0, 0, 0)
+            self._image.fill((*color, 200))
+            label = texts.parse_line(self._raw_label)
+            label.draw(tm, self._image, (self._padding, self._padding))
+            if self._data_label_format:
+                data_label = texts.parse_line(self._get_data_label())
+                data_label.draw(tm, self._image, (self._padding, self._padding + self._padding + label.get_size(tm)[1]))
+
+
 __all__ = [
     'Screen',
     'LanguageSelectScreen',
@@ -274,4 +408,5 @@ __all__ = [
     'LoadGameScreen',
     'SettingsScreen',
     'CreditsScreen',
+    'KeyboardSettingsScreen',
 ]

@@ -142,11 +142,64 @@ class Component(abc.ABC):
         image.blit(bg, (pad * (horizontal_nb + 1), pad * (vertical_nb + 1)))
 
 
-class Button(Component):
+class MenuComponent(Component, abc.ABC):
+    """This class marks a component as being acceptable by Menu components as an item."""
+    pass
+
+
+class Spacer(MenuComponent):
+    def __init__(self, game_engine, padding: int = 0):
+        """Create a spacer. A spacer is an empty component meant to fill empty cells in a menu grid.
+
+        :param game_engine: The game engine.
+        :type game_engine: engine.game_engine.GameEngine
+        :param padding: Inner padding.
+        """
+        super().__init__(game_engine, padding)
+
+    def _draw(self) -> pygame.Surface:
+        return pygame.Surface((0, 0))
+
+
+class Label(MenuComponent):
+    def __init__(self, game_engine, text: str, padding: int = 5):
+        """Create a label. Labels are simple components that display some text.
+
+        :param game_engine: The game engine.
+        :type game_engine: engine.game_engine.GameEngine
+        :param text: Label’s text.
+        :param padding: Inner padding.
+        """
+        super().__init__(game_engine, padding=padding)
+        self._text = text
+        self.w, self.h = texts.parse_line(text).get_size(self._tm)
+        self._image = None
+        self._update_image()
+
+    @property
+    def text(self) -> str:
+        return self._text
+
+    @text.setter
+    def text(self, text: str):
+        self._text = text
+        self._update_image()
+
+    def _draw(self) -> pygame.Surface:
+        return self._image
+
+    def _update_image(self):
+        self._image = pygame.Surface(self.size, pygame.SRCALPHA)
+        text = texts.parse_line(self._text)
+        text.draw(self._tm, self._image, (self._padding, self._padding))
+
+
+class Button(MenuComponent):
     def __init__(self, game_engine, label: str, name: str,
                  data_label_format: str | _typ.Callable[[_typ.Any], str] = None, data=None,
                  action: _typ.Callable[[Button], None] = None, enabled: bool = True):
-        """Create a button.
+        """Create a button. Buttons are labelled components that may trigger an action when activated.
+        Buttons may hold some data that will be displayed to the right of the label if a data_label_format is provided.
 
         :param game_engine: The game engine.
         :type game_engine: engine.game_engine.GameEngine
@@ -168,9 +221,11 @@ class Button(Component):
         text_size = texts.parse_line(label).get_size(self._tm)
         if self._data_label_format:
             data_text_size = texts.parse_line(self._get_data_label()).get_size(self._tm)
-            self.w, self.h = text_size[0] + data_text_size[0] + 2 * self._padding, max(text_size[1], data_text_size[1])
+            self.w = text_size[0] + data_text_size[0] + 2 * self._padding
+            self.h = max(text_size[1], data_text_size[1])
         else:
             self.w, self.h = text_size
+        self._image = None
         self._update_image()
 
     def _get_data_label(self) -> str:
@@ -231,8 +286,7 @@ class Button(Component):
 
         tm = self._tm
         w, h = self.w, self.h
-        gaps = 2 * self._padding
-        self._image = pygame.Surface((w + gaps, h + gaps), pygame.SRCALPHA, 32)
+        self._image = pygame.Surface(self.size, pygame.SRCALPHA)
 
         label = texts.parse_line(self._raw_label)
         if not self._enabled:
@@ -277,30 +331,42 @@ class Menu(Component):
         self._row_heights = [0] * self._grid_height
         self._column_widths = [0] * self._grid_width
         self._layout = layout
-        self._grid: list[list[Button | None]] = [[None] * columns for _ in range(rows)]
+        self._grid: list[list[MenuComponent | None]] = [[None] * columns for _ in range(rows)]
         self._buttons_nb = 0
         self._selection = None
         self._gap = gap
+
+    @property
+    def grid_width(self) -> int:
+        return self._grid_width
+
+    @property
+    def grid_height(self) -> int:
+        return self._grid_height
 
     def _on_enable_changed(self):
         for r, c in _it.product(range(self._grid_height), range(self._grid_width)):
             if button := self._get_button(r, c):
                 button.enabled = self._enabled
 
-    def add_item(self, button: Button):
+    def add_item(self, c: MenuComponent) -> MenuComponent:
+        if not isinstance(c, MenuComponent):
+            raise TypeError(f'expected MenuComponent, got {type(c)}')
+
         if self._layout == self.HORIZONTAL:
             row = self._buttons_nb // self._grid_width
             col = self._buttons_nb % self._grid_width
         else:
             row = self._buttons_nb % self._grid_width
             col = self._buttons_nb // self._grid_width
-        self._grid[row][col] = button
+        self._grid[row][col] = c
         if not self._selection:
             self._select_button(row, col)
-        self._update_size(row, col, button)
+        self._update_size(row, col, c)
         self._buttons_nb += 1
+        return c
 
-    def _update_size(self, row: int, col: int, new_component: Button | Spacer):
+    def _update_size(self, row: int, col: int, new_component: MenuComponent):
         cw, ch = new_component.size
 
         if cw > self._column_widths[col]:
@@ -350,31 +416,18 @@ class Menu(Component):
             up = key in self._get_keys(config.InputConfig.ACTION_UP)
             if right or left or down or up:
                 r, c = self._selection
+                start_pos = r, c
                 while not self._select_button(r, c):
                     if right:
-                        if c == self._grid_width - 1:
-                            r = (r + 1) % self._grid_height
-                            c = 0
-                        else:
-                            c += 1
+                        c = (c + 1) % self._grid_width
                     elif left:
-                        if c == 0:
-                            r = (r - 1) % self._grid_height
-                            c = self._grid_width - 1
-                        else:
-                            c -= 1
+                        c = (c - 1) % self._grid_width
                     elif down:
-                        if r == self._grid_height - 1:
-                            r = 0
-                            c = (c + 1) % self._grid_width
-                        else:
-                            r += 1
+                        r = (r + 1) % self._grid_height
                     elif up:
-                        if r == 0:
-                            r = self._grid_height - 1
-                            c = (c - 1) % self._grid_width
-                        else:
-                            r -= 1
+                        r = (r - 1) % self._grid_height
+                    if (r, c) == start_pos:  # We came back to the start, stop here to avoid infinite loop
+                        break
                 return True
 
         return False
@@ -390,25 +443,26 @@ class Menu(Component):
         return False
 
     def _get_button(self, row: int, col: int) -> Button | None:
-        return self._grid[row][col]
+        c = self._grid[row][col]
+        return c if isinstance(c, Button) else None
 
     def _draw(self) -> pygame.Surface:
-        image = pygame.Surface(self.size, pygame.SRCALPHA, 32)
+        image = pygame.Surface(self.size, pygame.SRCALPHA)
         self._render_bg(image)
         for r in range(self._grid_height):
             for c in range(self._grid_width):
-                if button := self._get_button(r, c):
-                    button.draw(image)
+                if comp := self._grid[r][c]:
+                    comp.draw(image)
         return image
 
 
 class TextArea(Component):
     def __init__(self, game_engine, text: str):
-        """Create a text area.
+        """Create a text area. Text areas behave similarly to labels but cannot be used as menu items.
 
         :param game_engine: The game engine.
         :type game_engine: engine.game_engine.GameEngine
-        :param text: Component’s text.
+        :param text: Text to display.
         """
         super().__init__(game_engine, padding=10)
         self._raw_text = text
@@ -426,7 +480,7 @@ class TextArea(Component):
     def _draw(self) -> pygame.Surface:
         w, h = self.w, self.h
         gaps = 2 * self._padding
-        image = pygame.Surface((w + gaps, h + gaps), pygame.SRCALPHA, 32)
+        image = pygame.Surface((w + gaps, h + gaps), pygame.SRCALPHA)
         self._render_bg(image)
         font_h = self._tm.font.size('a')[1]
         offset = 0
@@ -438,6 +492,8 @@ class TextArea(Component):
 
 __all__ = [
     'Component',
+    'Spacer',
+    'Label',
     'Button',
     'Menu',
     'TextArea',

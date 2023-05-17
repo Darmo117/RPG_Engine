@@ -145,6 +145,12 @@ class InputConfig:
         if key in (keys := self._keys[action]):
             keys.remove(key)
 
+    def get_action(self, key: int) -> str | None:
+        for action, keys in self._keys.items():
+            if key in keys:
+                return action
+        return None
+
     def __repr__(self):
         return f'InputConfig[{self._keys}]'
 
