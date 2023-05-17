@@ -300,24 +300,24 @@ class Menu(Component):
         self._update_size(row, col, button)
         self._buttons_nb += 1
 
-    def _update_size(self, row: int, col: int, new_button: Button):
-        bw, bh = new_button.size
+    def _update_size(self, row: int, col: int, new_component: Button | Spacer):
+        cw, ch = new_component.size
 
-        if bw > self._column_widths[col]:
-            self._column_widths[col] = bw
+        if cw > self._column_widths[col]:
+            self._column_widths[col] = cw
             for r in range(self._grid_height):
-                if (button := self._get_button(r, col)) and button != new_button:
-                    button.w = new_button.w
+                if (comp := self._grid[r][col]) and comp is not new_component:
+                    comp.w = new_component.w
         else:
-            new_button.w = self._get_button(0, 0).w
+            new_component.w = self._grid[0][col].w
 
-        if bh > self._row_heights[row]:
-            self._row_heights[row] = bh
+        if ch > self._row_heights[row]:
+            self._row_heights[row] = ch
             for c in range(self._grid_width):
-                if (button := self._get_button(row, c)) and button != new_button:
-                    button.h = new_button.h
+                if (comp := self._grid[row][c]) and comp is not new_component:
+                    comp.h = new_component.h
         else:
-            new_button.h = self._get_button(0, 0).h
+            new_component.h = self._grid[row][0].h
 
         self.w = sum(self._column_widths) + self._gap * (self._grid_width - 1)
         self.h = sum(self._row_heights) + self._gap * (self._grid_height - 1)
@@ -327,9 +327,9 @@ class Menu(Component):
         for r in range(self._grid_height):
             x = self._padding
             for c in range(self._grid_width):
-                if button := self._get_button(r, c):
-                    button.x = x
-                    button.y = y
+                if comp := self._grid[r][c]:
+                    comp.x = x
+                    comp.y = y
                 x += self._column_widths[c] + self._gap
             y += self._row_heights[r] + self._gap
 
