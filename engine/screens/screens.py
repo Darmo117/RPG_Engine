@@ -8,7 +8,7 @@ import typing as _typ
 
 import pygame
 
-from . import components, texts
+from . import components
 from .. import config, constants, events, game_state, i18n, io, scene
 
 _C = _typ.TypeVar('_C', bound=components.Component)
@@ -304,110 +304,6 @@ class KeyboardSettingsScreen(Screen):
                 ))
         menu.x = (game_engine.window_size[0] - menu.size[0]) / 2
         menu.y = (game_engine.window_size[1] - menu.size[1]) / 2
-
-    class Keyboard(components.Menu):
-        # FIXME key codes are not bound to physical keys
-        def __init__(self, game_engine):
-            """Create a keyboard.
-
-            :param game_engine: The game engine.
-            :type game_engine: engine.game_engine.GameEngine
-            """
-            super().__init__(game_engine, 5, 23, gap=0)
-            size = (int((2 / 3 * game_engine.window_size[0]) / self._grid_width),
-                    int((1 / 3 * game_engine.window_size[1]) / self._grid_height))
-            self.w = self._grid_width * (size[0] + 10)
-            self.h = self._grid_height * (size[1] + 10)
-
-            # Row 1
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_ESCAPE, self._on_key_change, size))
-            self._spacer(size)
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F1, self._on_key_change, size))
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F2, self._on_key_change, size))
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F3, self._on_key_change, size))
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F4, self._on_key_change, size))
-            self._spacer(size)
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F5, self._on_key_change, size))
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F6, self._on_key_change, size))
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F7, self._on_key_change, size))
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F8, self._on_key_change, size))
-            self._spacer(size)
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F9, self._on_key_change, size))
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F10, self._on_key_change, size))
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F11, self._on_key_change, size))
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_F12, self._on_key_change, size))
-            self._spacer(size)  # ScreenCap skipped
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_SCROLLLOCK, self._on_key_change, size))
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_PAUSE, self._on_key_change, size))
-            self._spacer(size)
-            self._spacer(size)
-            self._spacer(size)
-            self._spacer(size)
-
-            # Row 2
-            self.add_item(KeyboardSettingsScreen.Key(game_engine, pygame.K_DOLLAR, self._on_key_change,
-                                                     (size[0] * 1.3, size[1])))
-
-        def _spacer(self, size: tuple[int, int]):
-            s = components.Spacer(self._game_engine, padding=5)
-            s.w, s.h = size
-            self.add_item(s)
-
-        def _update_size(self, row: int, col: int, new_component: components.Button | components.Spacer):
-            if col == 0:
-                new_component.x = self._padding
-            else:
-                prev_key = self._grid[row][col - 1]
-                new_component.x = prev_key.x + prev_key.size[0]
-            if row == 0:
-                new_component.y = self._padding
-            else:
-                above_key = self._grid[row - 1][col]
-                new_component.y = above_key.y + above_key.size[1]
-
-        def _on_key_change(self, button: components.Button):
-            pass  # TODO
-
-    class Key(components.Button):
-        def __init__(self, game_engine, key: int, action: _typ.Callable[[components.Button], None],
-                     size: tuple[float, float]):
-            """Create a keyboard key.
-
-            :param game_engine: The game engine.
-            :type game_engine: engine.game_engine.GameEngine
-            :param key: The keyboard key code this component corresponds to.
-            :param action: Action to execute when this button is activated.
-            :param size: Key’s size.
-            """
-
-            def format_(data):
-                if not data:
-                    return ''
-                return game_engine.config.active_language.translate(f'input.{data}')
-
-            super().__init__(
-                game_engine,
-                io.get_key_name(key),
-                str(key),
-                data_label_format=format_,
-                data=game_engine.config.inputs.get_action(key),
-                action=action
-            )
-            self.w, self.h = size
-
-        def _update_image(self):
-            tm = self._tm
-            self._image = pygame.Surface(self.size, pygame.SRCALPHA)
-            if self._selected:
-                color = (50, 50, 50)
-            else:
-                color = (0, 0, 0)
-            self._image.fill((*color, 200))
-            label = texts.parse_line(self._raw_label)
-            label.draw(tm, self._image, (self._padding, self._padding))
-            if self._data_label_format:
-                data_label = texts.parse_line(self._get_data_label())
-                data_label.draw(tm, self._image, (self._padding, self._padding + self._padding + label.get_size(tm)[1]))
 
 
 __all__ = [
