@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import logging
 
 import pygame
 
@@ -15,6 +16,7 @@ class Scene(abc.ABC):
         :type game_engine: engine.game_engine.GameEngine
         :param parent: This scene’s parent.
         """
+        self._logger = logging.getLogger(self.__class__.__qualname__)
         self._game_engine = game_engine
         self._parent = parent
 

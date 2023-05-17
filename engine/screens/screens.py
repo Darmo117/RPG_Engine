@@ -267,7 +267,8 @@ class CreditsScreen(Screen):
                 text = f.read()
             text = text.replace('${game_title}', self._game_engine.config.game_title)
         except FileNotFoundError:
-            text = 'Missing credits file!'
+            self._logger.warning(f'Missing credits file for language "{lang.code}"!')
+            text = '§c#ff0000§b' + lang.translate('screen.credits.missing_file')
         text_area = self._add_component(components.TextArea(self._game_engine, text))
         w, h = self._game_engine.window_size
         text_area.w = math.floor(w * 0.8)
