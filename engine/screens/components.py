@@ -337,40 +337,44 @@ class Menu(Component):
         if super().on_event(event):
             return True
 
-        if self._selection and event.type == pygame.KEYDOWN:
+        if self._selection and event.type == pygame.KEYDOWN and self._buttons_nb > 0:
             key = event.key
-            if key in (pygame.K_RIGHT, pygame.K_LEFT, pygame.K_DOWN, pygame.K_UP):
-                if self._buttons_nb > 0:
-                    r, c = self._selection
-                    while not self._select_button(r, c):
-                        if key in self._get_keys(config.InputConfig.ACTION_RIGHT):
-                            if self._selection[1] == self._grid_width - 1:
-                                r = (r + 1) % self._grid_height
-                                c = 0
-                            else:
-                                c += 1
-                        elif key in self._get_keys(config.InputConfig.ACTION_LEFT):
-                            if self._selection[1] == 0:
-                                r = (r - 1) % self._grid_height
-                                c = self._grid_width - 1
-                            else:
-                                c -= 1
-                        elif key in self._get_keys(config.InputConfig.ACTION_DOWN):
-                            if self._selection[0] == self._grid_height - 1:
-                                r = 0
-                                c = (c + 1) % self._grid_width
-                            else:
-                                r += 1
-                        elif key in self._get_keys(config.InputConfig.ACTION_UP):
-                            if self._selection[0] == 0:
-                                r = self._grid_height - 1
-                                c = (c - 1) % self._grid_width
-                            else:
-                                r -= 1
-                    return True
 
-            elif key in self._get_keys(config.InputConfig.ACTION_OK_INTERACT):
+            if key in self._get_keys(config.InputConfig.ACTION_OK_INTERACT):
                 self._get_button(*self._selection).on_action()
+                return True
+
+            right = key in self._get_keys(config.InputConfig.ACTION_RIGHT)
+            left = key in self._get_keys(config.InputConfig.ACTION_LEFT)
+            down = key in self._get_keys(config.InputConfig.ACTION_DOWN)
+            up = key in self._get_keys(config.InputConfig.ACTION_UP)
+            if right or left or down or up:
+                r, c = self._selection
+                while not self._select_button(r, c):
+                    if right:
+                        if c == self._grid_width - 1:
+                            r = (r + 1) % self._grid_height
+                            c = 0
+                        else:
+                            c += 1
+                    elif left:
+                        if c == 0:
+                            r = (r - 1) % self._grid_height
+                            c = self._grid_width - 1
+                        else:
+                            c -= 1
+                    elif down:
+                        if r == self._grid_height - 1:
+                            r = 0
+                            c = (c + 1) % self._grid_width
+                        else:
+                            r += 1
+                    elif up:
+                        if r == 0:
+                            r = self._grid_height - 1
+                            c = (c - 1) % self._grid_width
+                        else:
+                            r -= 1
                 return True
 
         return False
