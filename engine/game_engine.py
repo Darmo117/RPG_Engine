@@ -44,7 +44,7 @@ class GameEngine:
     VERSION = '1.0'
 
     def __init__(self, args: _CLIArgs):
-        self._logger = logging.getLogger(self.NAME)
+        self._logger = logging.getLogger(self.__class__.__qualname__)
         pygame.init()
         constants.init(root=args.run_dir)
         self._config = config.load_config(debug=args.debug)

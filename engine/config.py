@@ -114,7 +114,7 @@ class InputConfig:
             page_up_keys: _typ.Iterable[int],
             page_down_keys: _typ.Iterable[int],
     ):
-        self._logger = logging.getLogger('Input config')
+        self._logger = logging.getLogger(self.__class__.__qualname__)
         self._keys: dict[str, list[int]] = {action: [] for action in self.ACTION_DEFAULTS}
         self._set_keys(self.ACTION_OK_INTERACT, ok_interact_keys)
         self._set_keys(self.ACTION_UP, up_keys)
@@ -173,7 +173,7 @@ class Config:
             selected_language: str = None,
             debug: bool = False
     ):
-        self._logger = logging.getLogger('Config')
+        self._logger = logging.getLogger(self.__class__.__qualname__)
         self._game_title = game_title
         self._window_size = (min(window_size[0], 800), min(window_size[1], 600))
         self._font = font

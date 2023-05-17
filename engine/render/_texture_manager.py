@@ -37,7 +37,7 @@ class TexturesManager:
             lambda: (self._missing_texture, size))
         self._sprite_sheets: dict[str, tuple[pygame.Surface, tuple[int, int], int]] = collections.defaultdict(
             lambda: (self._missing_texture, (size, size), 1))
-        self._logger = logging.getLogger('Textures Manager')
+        self._logger = logging.getLogger(self.__class__.__qualname__)
         self._logger.debug('Loading textures…')
         self._load_tilesets()
         self._load_sprite_sheets()
