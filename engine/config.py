@@ -7,7 +7,7 @@ import typing as _typ
 
 import pygame
 
-from . import constants, i18n, io, maths
+from . import constants, i18n, maths
 
 _SECTION_UI = 'UI'
 _SECTION_SOUND = 'Sound'
@@ -37,10 +37,10 @@ def load_config(debug: bool = False) -> Config:
     with constants.SETTINGS_FILE.open(mode='r', encoding='UTF-8') as f:
         settings_parser.read_file(f)
 
-    def parse_keys(action: str) -> _typ.Iterable[int]:
+    def parse_keys(action: str) -> _typ.Sequence[int]:
         if not settings_parser.has_option(_SECTION_GAMEPLAY, action):
             return InputConfig.ACTION_DEFAULTS[action]
-        return map(int, settings_parser.get(_SECTION_GAMEPLAY, action).split(','))
+        return tuple(map(int, settings_parser.get(_SECTION_GAMEPLAY, action).split(',')))
 
     input_config = InputConfig(
         ok_interact_keys=parse_keys(InputConfig.ACTION_OK_INTERACT),
@@ -80,6 +80,8 @@ def _get_settings_parser():
 
 
 class InputConfig:
+    MAX_KEYS = 4
+
     ACTION_OK_INTERACT = 'ok/interact'
     ACTION_UP = 'up'
     ACTION_DOWN = 'down'
@@ -90,7 +92,7 @@ class InputConfig:
     ACTION_PAGE_UP = 'page_up'
     ACTION_PAGE_DOWN = 'page_down'
 
-    ACTION_DEFAULTS = {
+    ACTION_DEFAULTS: dict[str, tuple[int, ...]] = {
         ACTION_OK_INTERACT: (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE,),
         ACTION_UP: (pygame.K_UP,),
         ACTION_DOWN: (pygame.K_DOWN,),
@@ -104,18 +106,18 @@ class InputConfig:
 
     def __init__(
             self,
-            ok_interact_keys: _typ.Iterable[int],
-            up_keys: _typ.Iterable[int],
-            down_keys: _typ.Iterable[int],
-            left_keys: _typ.Iterable[int],
-            right_keys: _typ.Iterable[int],
-            dash_keys: _typ.Iterable[int],
-            cancel_menu_keys: _typ.Iterable[int],
-            page_up_keys: _typ.Iterable[int],
-            page_down_keys: _typ.Iterable[int],
+            ok_interact_keys: _typ.Sequence[int],
+            up_keys: _typ.Sequence[int],
+            down_keys: _typ.Sequence[int],
+            left_keys: _typ.Sequence[int],
+            right_keys: _typ.Sequence[int],
+            dash_keys: _typ.Sequence[int],
+            cancel_menu_keys: _typ.Sequence[int],
+            page_up_keys: _typ.Sequence[int],
+            page_down_keys: _typ.Sequence[int],
     ):
         self._logger = logging.getLogger(self.__class__.__qualname__)
-        self._keys: dict[str, list[int]] = {action: [] for action in self.ACTION_DEFAULTS}
+        self._keys: dict[str, list[int]] = {action: [-1] * self.MAX_KEYS for action in self.ACTION_DEFAULTS}
         self._set_keys(self.ACTION_OK_INTERACT, ok_interact_keys)
         self._set_keys(self.ACTION_UP, up_keys)
         self._set_keys(self.ACTION_DOWN, down_keys)
@@ -126,30 +128,49 @@ class InputConfig:
         self._set_keys(self.ACTION_PAGE_UP, page_up_keys)
         self._set_keys(self.ACTION_PAGE_DOWN, page_down_keys)
 
-    def _set_keys(self, action: str, keys: _typ.Iterable[int]):
-        for key in keys:
-            if not self.add_key(action, key):
-                self._logger.warning(f'Duplicate key "{io.get_key_name(key)}" for action "{action}"!')
+    def _set_keys(self, action: str, keys: _typ.Sequence[int]):
+        self._keys[action] = [-1] * self.MAX_KEYS
+        if not keys or all(key < 0 for key in keys):
+            self._set_keys(action, self.ACTION_DEFAULTS[action])
+            return
+        for i in range(self.MAX_KEYS):
+            self.set_key(action, i, keys[i] if i < len(keys) else -1)
 
     def get_keys(self, action: str) -> tuple[int]:
         return tuple(self._keys[action])
 
-    def add_key(self, action: str, key: int) -> bool:
-        # Keys cannot be shared between multiple actions
-        if any(key in keys for a, keys in self._keys.items()):
-            return False
-        self._keys[action].append(key)
-        return True
+    def set_key(self, action: str, index: int, key: int):
+        self._keys[action][index] = key
 
-    def remove_key(self, action: str, key: int):
-        if key in (keys := self._keys[action]):
-            keys.remove(key)
+    def remove_key(self, action: str, index: int):
+        self._keys[action][index] = -1
 
     def get_action(self, key: int) -> str | None:
         for action, keys in self._keys.items():
             if key in keys:
                 return action
         return None
+
+    def reset(self):
+        for action, keys in self.ACTION_DEFAULTS.items():
+            self._set_keys(action, keys)
+
+    def update(self, config: InputConfig):
+        for action in self.ACTION_DEFAULTS:
+            self._set_keys(action, config.get_keys(action))
+
+    def copy(self) -> InputConfig:
+        return InputConfig(
+            self._keys[self.ACTION_OK_INTERACT],
+            self._keys[self.ACTION_UP],
+            self._keys[self.ACTION_DOWN],
+            self._keys[self.ACTION_LEFT],
+            self._keys[self.ACTION_RIGHT],
+            self._keys[self.ACTION_DASH],
+            self._keys[self.ACTION_CANCEL_MENU],
+            self._keys[self.ACTION_PAGE_UP],
+            self._keys[self.ACTION_PAGE_DOWN],
+        )
 
     def __repr__(self):
         return f'InputConfig[{self._keys}]'
@@ -175,7 +196,7 @@ class Config:
     ):
         self._logger = logging.getLogger(self.__class__.__qualname__)
         self._game_title = game_title
-        self._window_size = (min(window_size[0], 800), min(window_size[1], 600))
+        self._window_size = (min(window_size[0], 1280), min(window_size[1], 720))
         self._font = font
         self._languages = {lang.code: lang for lang in languages}
 

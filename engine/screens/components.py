@@ -55,6 +55,10 @@ class Component(abc.ABC):
         return self.w + 2 * self._padding, self.h + 2 * self._padding
 
     @property
+    def padding(self) -> int:
+        return self._padding
+
+    @property
     def enabled(self) -> bool:
         return self._enabled
 
@@ -87,6 +91,12 @@ class Component(abc.ABC):
     @abc.abstractmethod
     def _draw(self) -> pygame.Surface:
         pass
+
+
+class StandaloneComponent(Component, abc.ABC):
+    def set_center(self):
+        self.x = (self._game_engine.window_size[0] - self.size[0]) / 2
+        self.y = (self._game_engine.window_size[1] - self.size[1]) / 2
 
     def _render_bg(self, image: pygame.Surface):
         w, h = self.w, self.h
@@ -311,11 +321,13 @@ class Button(MenuComponent):
             self._image.blit(bottom_right, (self._padding + w, self._padding + h))
 
 
-class Menu(Component):
+class Menu(StandaloneComponent):
     HORIZONTAL = 0
     VERTICAL = 1
 
-    def __init__(self, game_engine, rows: int, columns: int, layout: int = HORIZONTAL, gap: int = 5):
+    def __init__(self, game_engine, rows: int, columns: int, layout: int = HORIZONTAL, gap: int = 5,
+                 on_show: _typ.Callable[[Menu], None] = None, on_hide: _typ.Callable[[Menu], None] = None,
+                 parent: Menu = None):
         """Create an empty menu.
 
         :param game_engine: The game engine.
@@ -326,6 +338,9 @@ class Menu(Component):
         :param gap: Spacing between each component in the grid.
         """
         super().__init__(game_engine, padding=10)
+        self._parent = parent
+        self._on_show = on_show
+        self._on_hide = on_hide
         self._grid_width = columns
         self._grid_height = rows
         self._row_heights = [0] * self._grid_height
@@ -335,6 +350,12 @@ class Menu(Component):
         self._buttons_nb = 0
         self._selection = None
         self._gap = gap
+        self.has_focus = True
+        self.is_visible = True
+
+    @property
+    def parent(self) -> Menu | None:
+        return self._parent
 
     @property
     def grid_width(self) -> int:
@@ -344,9 +365,28 @@ class Menu(Component):
     def grid_height(self) -> int:
         return self._grid_height
 
+    def get_selected_button(self) -> Button | None:
+        if not self._selection:
+            return None
+        return self._grid[self._selection[0]][self._selection[1]]
+
+    def show(self):
+        self.is_visible = True
+        self.has_focus = True
+        self.parent.has_focus = False
+        if self._on_show:
+            self._on_show(self)
+
+    def hide(self):
+        self.is_visible = False
+        self.has_focus = False
+        self.parent.has_focus = True
+        if self._on_hide:
+            self._on_hide(self)
+
     def _on_enable_changed(self):
         for r, c in _it.product(range(self._grid_height), range(self._grid_width)):
-            if button := self._get_button(r, c):
+            if button := self.get_button(r, c):
                 button.enabled = self._enabled
 
     def add_item(self, c: MenuComponent) -> MenuComponent:
@@ -360,11 +400,23 @@ class Menu(Component):
             row = self._buttons_nb % self._grid_width
             col = self._buttons_nb // self._grid_width
         self._grid[row][col] = c
-        if not self._selection:
+        if not self._selection and isinstance(c, Button):
             self._select_button(row, col)
         self._update_size(row, col, c)
         self._buttons_nb += 1
         return c
+
+    def set_column_width(self, col: int, w: int):
+        self._column_widths[col] = w
+        for i in range(self._grid_height):
+            self._grid[i][col].w = w - 2 * self._grid[i][col].padding
+        self._update_positions()
+
+    def set_row_height(self, row: int, h: int):
+        self._row_heights[row] = h
+        for i in range(self._grid_width):
+            self._grid[row][i].h = h - 2 * self._grid[row][i].padding
+        self._update_positions()
 
     def _update_size(self, row: int, col: int, new_component: MenuComponent):
         cw, ch = new_component.size
@@ -385,10 +437,12 @@ class Menu(Component):
         else:
             new_component.h = self._grid[row][0].h
 
+        self._update_positions()
+
+    def _update_positions(self):
         self.w = sum(self._column_widths) + self._gap * (self._grid_width - 1)
         self.h = sum(self._row_heights) + self._gap * (self._grid_height - 1)
 
-        # Update positions
         y = self._padding
         for r in range(self._grid_height):
             x = self._padding
@@ -400,63 +454,71 @@ class Menu(Component):
             y += self._row_heights[r] + self._gap
 
     def on_event(self, event: pygame.event.Event):
+        if not self.has_focus or not self.is_visible:
+            return False
         if super().on_event(event):
             return True
 
-        if self._selection and event.type == pygame.KEYDOWN and self._buttons_nb > 0:
+        if event.type == pygame.KEYDOWN:
             key = event.key
 
-            if key in self._get_keys(config.InputConfig.ACTION_OK_INTERACT):
-                self._get_button(*self._selection).on_action()
+            if key in self._get_keys(config.InputConfig.ACTION_CANCEL_MENU) and self._parent:
+                self.hide()
                 return True
 
-            right = key in self._get_keys(config.InputConfig.ACTION_RIGHT)
-            left = key in self._get_keys(config.InputConfig.ACTION_LEFT)
-            down = key in self._get_keys(config.InputConfig.ACTION_DOWN)
-            up = key in self._get_keys(config.InputConfig.ACTION_UP)
-            if right or left or down or up:
-                r, c = self._selection
-                start_pos = r, c
-                while not self._select_button(r, c):
-                    if right:
-                        c = (c + 1) % self._grid_width
-                    elif left:
-                        c = (c - 1) % self._grid_width
-                    elif down:
-                        r = (r + 1) % self._grid_height
-                    elif up:
-                        r = (r - 1) % self._grid_height
-                    if (r, c) == start_pos:  # We came back to the start, stop here to avoid infinite loop
-                        break
-                return True
+            if self._selection:
+                if key in self._get_keys(config.InputConfig.ACTION_OK_INTERACT):
+                    self.get_button(*self._selection).on_action()
+                    return True
+
+                right = key in self._get_keys(config.InputConfig.ACTION_RIGHT)
+                left = key in self._get_keys(config.InputConfig.ACTION_LEFT)
+                down = key in self._get_keys(config.InputConfig.ACTION_DOWN)
+                up = key in self._get_keys(config.InputConfig.ACTION_UP)
+                if right or left or down or up:
+                    r, c = self._selection
+                    start_pos = r, c
+                    while not self._select_button(r, c):
+                        if right:
+                            c = (c + 1) % self._grid_width
+                        elif left:
+                            c = (c - 1) % self._grid_width
+                        elif down:
+                            r = (r + 1) % self._grid_height
+                        elif up:
+                            r = (r - 1) % self._grid_height
+                        if (r, c) == start_pos:  # We came back to the start, stop here to avoid infinite loop
+                            break
+                    return True
 
         return False
 
     def _select_button(self, row: int, col: int) -> bool:
         position = row, col
-        if (previous := self._selection) != position and (b := self._get_button(*position)):
+        if (previous := self._selection) != position and (b := self.get_button(*position)):
             if previous:
-                self._get_button(*previous).selected = False
+                self.get_button(*previous).selected = False
             self._selection = position
             b.selected = True
             return True
         return False
 
-    def _get_button(self, row: int, col: int) -> Button | None:
+    def get_button(self, row: int, col: int) -> Button | None:
         c = self._grid[row][col]
         return c if isinstance(c, Button) else None
 
     def _draw(self) -> pygame.Surface:
         image = pygame.Surface(self.size, pygame.SRCALPHA)
-        self._render_bg(image)
-        for r in range(self._grid_height):
-            for c in range(self._grid_width):
-                if comp := self._grid[r][c]:
-                    comp.draw(image)
+        if self.is_visible:
+            self._render_bg(image)
+            for r in range(self._grid_height):
+                for c in range(self._grid_width):
+                    if comp := self._grid[r][c]:
+                        comp.draw(image)
         return image
 
 
-class TextArea(Component):
+class TextArea(StandaloneComponent):
     def __init__(self, game_engine, text: str):
         """Create a text area. Text areas behave similarly to labels but cannot be used as menu items.
 

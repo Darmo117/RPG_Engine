@@ -38,14 +38,16 @@ class Screen(scene.Scene, abc.ABC):
         self._components: list[components.Component] = []
 
     def _add_component(self, component: _C) -> _C:
-        if component in self._components:
-            self._components.remove(component)
-        self._components.append(component)
+        if component not in self._components:
+            self._components.append(component)
         return component
+
+    def _is_submenu_visible(self):
+        return any(isinstance(comp, components.Menu) and comp.parent and comp.is_visible for comp in self._components)
 
     def on_input_event(self, event: pygame.event.Event):
         if not super().on_input_event(event):
-            if (self.parent and event.type == pygame.KEYDOWN
+            if (self.parent and not self._is_submenu_visible() and event.type == pygame.KEYDOWN
                     and event.key in self._get_keys(config.InputConfig.ACTION_CANCEL_MENU)):
                 self._fire_screen_event(self.parent)
                 return True
@@ -273,11 +275,10 @@ class CreditsScreen(Screen):
         w, h = self._game_engine.window_size
         text_area.w = math.floor(w * 0.8)
         text_area.h = math.floor(h * 0.8)
-        text_area.x = (w - text_area.size[0]) / 2
-        text_area.y = (h - text_area.size[1]) / 2
+        text_area.set_center()
 
 
-class KeyboardSettingsScreen(Screen):
+class KeyboardSettingsScreen(Screen):  # TODO apply changes only when user activates confirm button to avoid confusion
     def __init__(self, game_engine, parent: Screen = None):
         """Create a screen to change keyboard settings.
 
@@ -285,26 +286,141 @@ class KeyboardSettingsScreen(Screen):
         :type game_engine: engine.game_engine.GameEngine
         :param parent: The screen that lead to this one.
         """
+        self._init = True
         super().__init__(game_engine, parent, constants.BACKGROUNDS_DIR / 'keyboard_settings_screen.png')
+        translate = game_engine.config.active_language.translate
         actions = config.InputConfig.ACTION_DEFAULTS.keys()
-        menu = self._add_component(components.Menu(game_engine, 2 * len(actions), 3, gap=0))
+        # Make local copy of keybinds and modify that until user confirms
+        self._keybinds = game_engine.config.inputs.copy()
+
+        self._menu = self._add_component(components.Menu(game_engine, 2 * len(actions) + 1,
+                                                         config.InputConfig.MAX_KEYS, gap=0))
         for action_name in actions:
-            translate = game_engine.config.active_language.translate
-            menu.add_item(components.Label(game_engine, '§b' + translate(f'input.{action_name}')))
-            for _ in range(menu.grid_width - 1):
-                menu.add_item(components.Spacer(game_engine))
-            inputs = game_engine.config.inputs.get_keys(action_name)
-            for i in range(menu.grid_width):
-                input_ = inputs[i] if i < len(inputs) else None
-                menu.add_item(components.Button(
+            self._menu.add_item(components.Label(game_engine, '§b' + translate(f'input.{action_name}')))
+            for _ in range(self._menu.grid_width - 1):
+                self._menu.add_item(components.Spacer(game_engine))
+            inputs = self._keybinds.get_keys(action_name)
+            for i in range(self._menu.grid_width):
+                self._menu.add_item(components.Button(
                     game_engine,
-                    '§u' + translate('screen.keyboard_settings.menu.key_name_format', id=i + 1),
-                    f'{actions}_{i + 1}',
-                    data_label_format=lambda data: '§c#00ff00' + io.get_key_name(data) if data is not None else '',
-                    data=input_
+                    translate('screen.keyboard_settings.menu.key_name_format', id=i + 1),
+                    str(i),
+                    data_label_format=lambda d: '§u' + io.get_key_name(d[1]) if d[1] is not None else '',
+                    data=(action_name, inputs[i] if inputs[i] >= 0 else None),
+                    action=self._on_button,
                 ))
-        menu.x = (game_engine.window_size[0] - menu.size[0]) / 2
-        menu.y = (game_engine.window_size[1] - menu.size[1]) / 2
+        self._menu.add_item(components.Button(
+            game_engine, '§c#00e000' + translate('screen.keyboard_settings.menu.confirm'), 'confirm',
+            action=self._on_confirm))
+        self._menu.add_item(components.Button(
+            game_engine, '§c#e00000' + translate('screen.keyboard_settings.menu.reset'), 'reset',
+            action=self._on_reset))
+        for _ in range(self._menu.grid_width - 2):
+            self._menu.add_item(components.Spacer(game_engine))
+        for c in range(self._menu.grid_width):
+            self._menu.set_column_width(c, 200)
+        self._menu.set_center()
+
+        self._action_choice_menu = self._add_component(components.Menu(game_engine, 2, 3, parent=self._menu))
+        self._action_choice_menu.add_item(components.Label(
+            game_engine, translate('screen.keyboard_settings.menu.action_choice_menu.label')))
+        self._action_choice_menu.add_item(components.Spacer(game_engine))
+        self._action_choice_menu.add_item(components.Spacer(game_engine))
+        self._action_choice_menu.add_item(components.Button(
+            game_engine, translate('screen.keyboard_settings.menu.action_choice_menu.change_keybind'),
+            'change_keybind', action=self._on_change_keybind))
+        self._action_choice_menu.add_item(components.Button(
+            game_engine, translate('screen.keyboard_settings.menu.action_choice_menu.remove_keybind'),
+            'remove_keybind', action=self._on_remove_keybind))
+        self._action_choice_menu.add_item(components.Button(
+            game_engine, translate('screen.keyboard_settings.menu.action_choice_menu.cancel'),
+            'cancel', action=lambda _: self._action_choice_menu.hide()))
+        self._action_choice_menu.set_center()
+        self._action_choice_menu.hide()
+
+        self._set_key_menu = self._add_component(_KeyMenu(game_engine, self._menu, self._on_key_typed))
+        self._set_key_menu.set_center()
+        self._set_key_menu.hide()
+        self._init = False
+
+    def _on_confirm(self, _=None, go_back: bool = True):
+        self._game_engine.config.inputs.update(self._keybinds)
+        self._game_engine.config.save()
+        if go_back:
+            self._fire_screen_event(self.parent)
+
+    def _on_reset(self, _=None):
+        self._keybinds.reset()
+        for r, action_name in enumerate(config.InputConfig.ACTION_DEFAULTS):
+            inputs = self._keybinds.get_keys(action_name)
+            for c in range(self._menu.grid_width):
+                self._menu.get_button(2 * r + 1, c).data = (action_name, inputs[c] if c < len(inputs) else None)
+        self._on_confirm(go_back=False)
+
+    def _on_button(self, _):
+        if self._menu.get_selected_button().data[1] is not None:
+            self._action_choice_menu.show()
+        else:
+            self._set_key_menu.show()
+
+    def _on_change_keybind(self, _):
+        self._action_choice_menu.hide()
+        self._set_key_menu.show()
+
+    def _on_remove_keybind(self, _):
+        self._action_choice_menu.hide()
+        button = self._menu.get_selected_button()
+        if self._keybinds.remove_key(button.data[0], int(button.name)):
+            button.data = (button.data[0], None)
+
+    def _on_key_typed(self, menu: _KeyMenu):
+        if self._init:
+            return
+        button = self._menu.get_selected_button()
+        self._keybinds.remove_key(button.data[0], int(button.name))
+        button.data = (button.data[0], menu.typed_key)
+        self._keybinds.set_key(button.data[0], int(button.name), button.data[1])
+
+    def on_input_event(self, event: pygame.event.Event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == pygame.BUTTON_MIDDLE:
+            self._on_reset()
+            return True
+        return super().on_input_event(event)
+
+
+class _KeyMenu(components.Menu):
+    def __init__(self, game_engine, parent, on_hide: _typ.Callable[[_KeyMenu], None]):
+        """Create a menu that captures a keystroke.
+
+        :param game_engine: The game engine.
+        :type game_engine: engine.game_engine.GameEngine
+        :param parent: The menu opened this one.
+        :param on_hide: A function to call when this menu is hidden.
+        """
+        # noinspection PyTypeChecker
+        super().__init__(game_engine, 1, 1, parent=parent, on_hide=on_hide)
+        self._label = self.add_item(components.Label(
+            game_engine,
+            game_engine.config.active_language.translate('screen.keyboard_settings.menu.key_menu.label'))
+        )
+        self._typed_key = None
+
+    @property
+    def typed_key(self) -> int | None:
+        return self._typed_key
+
+    def show(self):
+        super().show()
+        self._typed_key = None
+
+    def on_event(self, event: pygame.event.Event):
+        if not self.is_visible or not self.has_focus:
+            return False
+        if self._typed_key is None and event.type == pygame.KEYDOWN:
+            self._typed_key = event.key
+            self.hide()
+            return True
+        return super().on_event(event)
 
 
 __all__ = [
