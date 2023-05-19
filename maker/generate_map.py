@@ -15,7 +15,7 @@ if not hasattr(module, 'map_data'):
     print('No "map_data" variable defined in module!')
     sys.exit(-2)
 
-with gzip.open(f'../run/data/maps/{name}.map', 'wb') as f:
+with gzip.open(f'../run/user-generated/maps/{name}.map', 'wb') as f:
     buffer = io.ByteBuffer()
     data = module.map_data
     buffer.write_int(1, signed=False)
