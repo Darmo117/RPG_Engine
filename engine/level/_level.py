@@ -46,6 +46,7 @@ class LevelLoader:
         interactions = self._load_interactions(buffer, width, height)
         return Level(
             self._engine,
+            name,
             self._levels_data[name],
             width,
             height,
@@ -100,6 +101,7 @@ class LevelLoader:
 class Level(scene.Scene):
     def __init__(self,
                  game_engine,
+                 name: str,
                  data: dict,
                  width: int,
                  height: int,
@@ -112,6 +114,7 @@ class Level(scene.Scene):
 
         :param game_engine: The game engine.
         :type game_engine: engine.game_engine.GameEngine
+        :param name: Level’s internal name.
         :param data: Level’s data.
         :param width: Level’s horizontal size.
         :param height: Level’s vertical size.
@@ -121,6 +124,7 @@ class Level(scene.Scene):
         :param bg_color: The background color.
         """
         super().__init__(game_engine)
+        self._name = name
         self._data = data
         self._width = width
         self._height = height
@@ -139,6 +143,14 @@ class Level(scene.Scene):
         )
         self._title_label.x = 6
         self._title_label.y = 12
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def entity_set(self) -> set[entities.Entity]:
+        return self._entities
 
     def spawn_player(self, at: pygame.Vector2):
         if self._player:

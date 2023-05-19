@@ -10,7 +10,7 @@ import traceback
 import pygame
 
 from . import config, constants, errors, events, level, maths, render, scene as scene_
-from .screens import screens
+from .screens import screens, texts
 
 
 def run(*argv: str) -> int:
@@ -43,6 +43,8 @@ class GameEngine:
     NAME = 'RPG Engine'
     VERSION = '1.0'
 
+    FPS = 60
+
     def __init__(self, args: _CLIArgs):
         self._logger = logging.getLogger(self.__class__.__qualname__)
         pygame.init()
@@ -70,6 +72,8 @@ class GameEngine:
         self._event_wait_start_time = 0
         self._update_scene = True
         self._running = False
+        self._clock = pygame.time.Clock()
+        self._show_debug_info = self._config.debug
 
     @property
     def config(self) -> config.Config:
@@ -122,7 +126,6 @@ class GameEngine:
             self._active_scene = screens.TitleScreen(self)
 
         pygame.key.set_repeat(300, 150)
-        clock = pygame.time.Clock()
         self._running = True
         while self._running:
             if not self._active_scene:
@@ -132,6 +135,8 @@ class GameEngine:
                 if event.type == pygame.QUIT:
                     self._stop()
                     break
+                if self._config.debug and event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
+                    self._show_debug_info = not self._show_debug_info
                 if self._update_scene and not self._scene_transition:
                     self._active_scene.on_input_event(event)
 
@@ -158,8 +163,52 @@ class GameEngine:
             if self._scene_transition:
                 self._scene_transition.draw(self._screen)
 
-            clock.tick(60)
+            if self._show_debug_info:
+                self._draw_debug_info()
+
+            self._window.fill((0, 0, 0))
+            image = self._scale_screen()
+            x = (self._window.get_width() - image.get_width()) / 2
+            y = (self._window.get_height() - image.get_height()) / 2
+            self._window.blit(image, (x, y))
+            self._clock.tick(self.FPS)
             pygame.display.flip()
+
+    def _draw_debug_info(self):
+        fps = round(self._clock.get_fps())
+        if fps <= 30:
+            color = 'ff0000'
+        elif fps <= 40:
+            color = 'da7422'
+        else:
+            color = 'ffffff'
+        s = f"""
+§bDebug info (F3 to toggle)
+§c#{color}FPS: {fps}
+Scene type: {type(self._active_scene).__qualname__}
+""".strip()
+        if isinstance(self._active_scene, level.Level):
+            s += f"""
+Level name: {self._active_scene.name}
+Entities: {len(self._active_scene.entity_set)}
+""".rstrip()
+        lines = texts.parse_lines(s)
+        tm = self._texture_manager
+        y = 5
+        x = 5
+        for line in lines:
+            line.draw(tm, self._screen, (x, y))
+            y += line.get_size(tm)[1]
+
+    def _scale_screen(self) -> pygame.Surface:
+        r = self._config.screen_ratio
+        ww, wh = self._window.get_size()
+        w = ww
+        h = w / r
+        if h > wh:
+            h = wh
+            w = h * r
+        return pygame.transform.smoothscale(self._screen, (w, h))
 
     def _handle_event(self, event: events.Event):
         in_level = isinstance(self._active_scene, level.Level)
