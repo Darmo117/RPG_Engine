@@ -50,7 +50,7 @@ class GameEngine:
         pygame.init()
         constants.init(root=args.run_dir)
         self._config = config.load_config(debug=args.debug)
-        self._window = pygame.display.set_mode(self._config.base_screen_size, pygame.RESIZABLE, vsync=True)
+        self._window = pygame.display.set_mode(self._config.base_screen_size, pygame.RESIZABLE)
         self._screen = pygame.Surface(self._config.base_screen_size)
         pygame.display.set_caption(self._config.game_title)
 
