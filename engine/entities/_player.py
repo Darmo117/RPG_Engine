@@ -11,7 +11,7 @@ class PlayerEntity(_entity.Entity):
         :param level: Level containing this entity.
         :type level: engine.level.Level
         """
-        super().__init__(sprite_sheet, level, 0.065)
+        super().__init__(sprite_sheet, level, 0.1)
 
 
 __all__ = [
