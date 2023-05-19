@@ -223,7 +223,7 @@ class Level(scene.Scene):
                     if self.is_rect_visible(screen, self._screen_pos(entity.position), entity.size * constants.SCALE):
                         self._draw_entity(entity, screen)
         # Render level name label
-        if self._title_label.visible:
+        if self._title_label.is_visible:
             self._title_label.draw(screen)
 
     def is_rect_visible(self, screen: pygame.Surface, pos: pygame.Vector2, size: pygame.Vector2) -> bool:
@@ -268,7 +268,7 @@ class _LevelNameLabel(_comp.Component):
         self._update_image()
 
     @property
-    def visible(self) -> bool:
+    def is_visible(self) -> bool:
         return self._visible
 
     def update(self):

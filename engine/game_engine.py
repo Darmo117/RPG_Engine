@@ -50,8 +50,10 @@ class GameEngine:
         pygame.init()
         constants.init(root=args.run_dir)
         self._config = config.load_config(debug=args.debug)
-        self._screen = pygame.display.set_mode(self._config.window_size)
+        self._window = pygame.display.set_mode(self._config.base_screen_size, pygame.RESIZABLE, vsync=True)
+        self._screen = pygame.Surface(self._config.base_screen_size)
         pygame.display.set_caption(self._config.game_title)
+
         if self._config.debug:
             logging_level = logging.DEBUG
         else:
@@ -96,7 +98,7 @@ class GameEngine:
 
     @property
     def window_size(self) -> tuple[int, int]:
-        return pygame.display.get_window_size()
+        return self._screen.get_size()
 
     @property
     def logger(self) -> logging.Logger:

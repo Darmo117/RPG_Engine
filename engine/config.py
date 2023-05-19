@@ -55,7 +55,7 @@ def load_config(debug: bool = False) -> Config:
 
     return Config(
         game_title=str(json_data['game_title']),
-        window_size=(int(w), int(h)),
+        base_screen_size=(int(w), int(h)),
         font=font,
         languages=languages,
         bgm_volume=settings_parser.getint(_SECTION_SOUND, _OPTION_BGM_VOLUME, fallback=100),
@@ -181,7 +181,7 @@ class Config:
     def __init__(
             self,
             game_title: str,
-            window_size: tuple[int, int],
+            base_screen_size: tuple[int, int],
             font: pygame.font.Font,
             languages: _typ.Iterable[i18n.Language],
             bgm_volume: int,
@@ -195,7 +195,7 @@ class Config:
     ):
         self._logger = logging.getLogger(self.__class__.__qualname__)
         self._game_title = game_title
-        self._window_size = (min(window_size[0], 1280), min(window_size[1], 720))
+        self._screen_size = (max(base_screen_size[0], 1280), max(base_screen_size[1], 720))
         self._font = font
         self._languages = {lang.code: lang for lang in languages}
 
@@ -220,8 +220,12 @@ class Config:
         return self._input_config
 
     @property
-    def window_size(self) -> tuple[int, int]:
-        return self._window_size
+    def base_screen_size(self) -> tuple[int, int]:
+        return self._screen_size
+
+    @property
+    def screen_ratio(self) -> float:
+        return self._screen_size[0] / self._screen_size[1]
 
     @property
     def bg_music_volume(self) -> int:
