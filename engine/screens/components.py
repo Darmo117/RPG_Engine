@@ -82,7 +82,6 @@ class Component(abc.ABC):
 
     def draw(self, screen: pygame.Surface):
         """Draw this component on a screen at the given position.
-        Should not be overriden by subclasses.
 
         :param screen: The screen to draw on.
         """
@@ -94,11 +93,30 @@ class Component(abc.ABC):
 
 
 class StandaloneComponent(Component, abc.ABC):
+    def __init__(self, game_engine, padding: int = 0):
+        """Create a standalone component.
+
+        :param game_engine: The game engine.
+        :type game_engine: engine.game_engine.GameEngine
+        :param padding: The space around the component’s contents.
+        """
+        super().__init__(game_engine, padding=padding)
+        self._bg_texture = None
+
     def set_center(self):
         self.x = (self._game_engine.window_size[0] - self.size[0]) / 2
         self.y = (self._game_engine.window_size[1] - self.size[1]) / 2
 
-    def _render_bg(self, image: pygame.Surface):
+    def _on_size_changed(self):
+        self._update_bg()
+
+    def draw(self, screen: pygame.Surface):
+        if self._bg_texture is None:
+            self._update_bg()
+        return super().draw(screen)
+
+    def _update_bg(self):
+        self._bg_texture = pygame.Surface(self.size, pygame.SRCALPHA)
         w, h = self.w, self.h
         pad = self._padding
         size = (pad, pad)
@@ -106,10 +124,10 @@ class StandaloneComponent(Component, abc.ABC):
         top_right = self._tm.get_menu_texture((2 * pad, 0), size)
         bottom_left = self._tm.get_menu_texture((0, 2 * pad), size)
         bottom_right = self._tm.get_menu_texture((2 * pad, 2 * pad), size)
-        image.blit(top_left, (0, 0))
-        image.blit(top_right, (pad + w, 0))
-        image.blit(bottom_left, (0, pad + h))
-        image.blit(bottom_right, (pad + w, pad + h))
+        self._bg_texture.blit(top_left, (0, 0))
+        self._bg_texture.blit(top_right, (pad + w, 0))
+        self._bg_texture.blit(bottom_left, (0, pad + h))
+        self._bg_texture.blit(bottom_right, (pad + w, pad + h))
         # Sides
         horizontal_nb = w // pad
         horizontal_diff = w - pad * horizontal_nb
@@ -118,38 +136,38 @@ class StandaloneComponent(Component, abc.ABC):
         # Full vertical sides
         for i in range(vertical_nb):
             left_side = self._tm.get_menu_texture((0, pad), size)
-            image.blit(left_side, (0, pad * (i + 1)))
+            self._bg_texture.blit(left_side, (0, pad * (i + 1)))
             right_side = self._tm.get_menu_texture((2 * pad, pad), size)
-            image.blit(right_side, (pad + w, pad * (i + 1)))
+            self._bg_texture.blit(right_side, (pad + w, pad * (i + 1)))
             # Full background
             for j in range(horizontal_nb):
                 bg = self._tm.get_menu_texture((pad, pad), size)
-                image.blit(bg, (pad * (j + 1), pad * (i + 1)))
+                self._bg_texture.blit(bg, (pad * (j + 1), pad * (i + 1)))
             # Partial vertical background
             bg = self._tm.get_menu_texture((pad, pad), (horizontal_diff, pad))
-            image.blit(bg, (pad * (horizontal_nb + 1), pad * (i + 1)))
+            self._bg_texture.blit(bg, (pad * (horizontal_nb + 1), pad * (i + 1)))
         # Partial vertical sides
         left_side = self._tm.get_menu_texture((0, pad), (pad, vertical_diff))
-        image.blit(left_side, (0, pad * (vertical_nb + 1)))
+        self._bg_texture.blit(left_side, (0, pad * (vertical_nb + 1)))
         right_side = self._tm.get_menu_texture((2 * pad, pad), (pad, vertical_diff))
-        image.blit(right_side, (pad + w, pad * (vertical_nb + 1)))
+        self._bg_texture.blit(right_side, (pad + w, pad * (vertical_nb + 1)))
         # Full horizontal sides
         for i in range(horizontal_nb):
             top_side = self._tm.get_menu_texture((pad, 0), size)
-            image.blit(top_side, (pad * (i + 1), 0))
+            self._bg_texture.blit(top_side, (pad * (i + 1), 0))
             bottom_side = self._tm.get_menu_texture((pad, 2 * pad), size)
-            image.blit(bottom_side, (pad * (i + 1), pad + h))
+            self._bg_texture.blit(bottom_side, (pad * (i + 1), pad + h))
             # Partial horizontal background
             bg = self._tm.get_menu_texture((pad, pad), (pad, vertical_diff))
-            image.blit(bg, (pad * (i + 1), pad * (vertical_nb + 1)))
+            self._bg_texture.blit(bg, (pad * (i + 1), pad * (vertical_nb + 1)))
         # Partial horizontal sides
         top_side = self._tm.get_menu_texture((pad, 0), (horizontal_diff, pad))
-        image.blit(top_side, (pad * (horizontal_nb + 1), 0))
+        self._bg_texture.blit(top_side, (pad * (horizontal_nb + 1), 0))
         bottom_side = self._tm.get_menu_texture((pad, 2 * pad), (horizontal_diff, pad))
-        image.blit(bottom_side, (pad * (horizontal_nb + 1), pad + h))
+        self._bg_texture.blit(bottom_side, (pad * (horizontal_nb + 1), pad + h))
         # Partial background bottom-right corner
         bg = self._tm.get_menu_texture((pad, pad), (horizontal_diff, vertical_diff))
-        image.blit(bg, (pad * (horizontal_nb + 1), pad * (vertical_nb + 1)))
+        self._bg_texture.blit(bg, (pad * (horizontal_nb + 1), pad * (vertical_nb + 1)))
 
 
 class MenuComponent(Component, abc.ABC):
@@ -253,12 +271,12 @@ class Button(MenuComponent):
         self._update_image()
 
     @property
-    def data(self):
+    def data(self) -> _typ.Any:
         return self._data
 
     @data.setter
-    def data(self, value):
-        self._data = value
+    def data(self, data):
+        self._data = data
         self._update_image()
 
     @property
@@ -440,8 +458,9 @@ class Menu(StandaloneComponent):
         self._update_positions()
 
     def _update_positions(self):
-        self.w = sum(self._column_widths) + self._gap * (self._grid_width - 1)
-        self.h = sum(self._row_heights) + self._gap * (self._grid_height - 1)
+        # Edit fields directly and not properties to avoid calling _update_bg() each time
+        self._w = sum(self._column_widths) + self._gap * (self._grid_width - 1)
+        self._h = sum(self._row_heights) + self._gap * (self._grid_height - 1)
 
         y = self._padding
         for r in range(self._grid_height):
@@ -510,7 +529,7 @@ class Menu(StandaloneComponent):
     def _draw(self) -> pygame.Surface:
         image = pygame.Surface(self.size, pygame.SRCALPHA)
         if self.is_visible:
-            self._render_bg(image)
+            image.blit(self._bg_texture, (0, 0))
             for r in range(self._grid_height):
                 for c in range(self._grid_width):
                     if comp := self._grid[r][c]:
@@ -528,7 +547,9 @@ class TextArea(StandaloneComponent):
         """
         super().__init__(game_engine, padding=10)
         self._raw_text = text
-        self._text = texts.parse_lines(text)
+        self._text = None
+        self.text = text
+        self._image = pygame.Surface(self.size, pygame.SRCALPHA)
 
     @property
     def text(self) -> str:
@@ -538,18 +559,20 @@ class TextArea(StandaloneComponent):
     def text(self, text: str):
         self._raw_text = text
         self._text = texts.parse_lines(text)
+        self._update_bg()
 
-    def _draw(self) -> pygame.Surface:
-        w, h = self.w, self.h
-        gaps = 2 * self._padding
-        image = pygame.Surface((w + gaps, h + gaps), pygame.SRCALPHA)
-        self._render_bg(image)
+    def _update_bg(self):
+        super()._update_bg()
+        self._image = pygame.Surface(self.size, pygame.SRCALPHA)
+        self._image.blit(self._bg_texture, (0, 0))
         font_h = self._tm.font.size('a')[1]
         offset = 0
         for line in self._text:
-            line.draw(self._tm, image, (self._padding, self._padding + offset))
+            line.draw(self._tm, self._image, (self._padding, self._padding + offset))
             offset += font_h
-        return image
+
+    def _draw(self) -> pygame.Surface:
+        return self._image
 
 
 __all__ = [
