@@ -10,7 +10,7 @@ import traceback
 import pygame
 
 from . import config, constants, errors, events, level, maths, render, scene as scene_
-from .screens import screens, texts
+from .screens import screens, hud
 
 
 def run(*argv: str) -> int:
@@ -76,6 +76,7 @@ class GameEngine:
         self._running = False
         self._clock = pygame.time.Clock()
         self._show_debug_info = self._config.debug
+        self._debug_hud = hud.DebugHUD(self)
 
     @property
     def config(self) -> config.Config:
@@ -99,6 +100,10 @@ class GameEngine:
     @property
     def window_size(self) -> tuple[int, int]:
         return self._screen.get_size()
+
+    @property
+    def fps(self) -> float:
+        return self._clock.get_fps()
 
     @property
     def logger(self) -> logging.Logger:
@@ -166,7 +171,8 @@ class GameEngine:
                 self._scene_transition.draw(self._screen)
 
             if self._show_debug_info:
-                self._draw_debug_info()
+                self._debug_hud.update()
+                self._debug_hud.draw(self._screen)
 
             self._window.fill((0, 0, 0))
             image = self._scale_screen()
@@ -175,38 +181,6 @@ class GameEngine:
             self._window.blit(image, (x, y))
             self._clock.tick(self.FPS)
             pygame.display.flip()
-
-    def _draw_debug_info(self):
-        fps = round(self._clock.get_fps())
-        if fps <= 30:
-            color = 'ff0000'
-        elif fps <= 40:
-            color = 'da7422'
-        else:
-            color = 'ffffff'
-        s = f"""
-§bDebug info (F3 to toggle)
-§c#{color}FPS: {fps}
-Language: {self.config.active_language}
-Always run: {self.config.always_run}
-BGM: {self.config.bg_music_volume}
-BGS: {self.config.bg_sounds_volume}
-MFX: {self.config.music_effects_volume}
-SFX: {self.config.sound_effects_volume}
-Scene type: {type(self._active_scene).__qualname__}
-""".strip()
-        if isinstance(self._active_scene, level.Level):
-            s += f"""
-Level name: {self._active_scene.name}
-Entities: {len(self._active_scene.entity_set)}
-""".rstrip()
-        lines = texts.parse_lines(s)
-        tm = self._texture_manager
-        y = 5
-        x = 5
-        for line in lines:
-            line.draw(tm, self._screen, (x, y))
-            y += line.get_size(tm)[1]
 
     def _scale_screen(self) -> pygame.Surface:
         r = self._config.screen_ratio
