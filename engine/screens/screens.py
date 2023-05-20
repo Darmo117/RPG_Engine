@@ -289,7 +289,7 @@ class KeyboardSettingsScreen(Screen):
         self._init = True
         super().__init__(game_engine, parent, constants.BACKGROUNDS_DIR / 'keyboard_settings_screen.png')
         translate = game_engine.config.active_language.translate
-        actions = config.InputConfig.ACTION_DEFAULTS.keys()
+        actions = config.InputConfig.ACTIONS
         # Make local copy of keybinds and modify that until user confirms
         self._keybinds = game_engine.config.inputs.copy()
 
@@ -318,7 +318,7 @@ class KeyboardSettingsScreen(Screen):
         for _ in range(self._menu.grid_width - 2):
             self._menu.add_item(components.Spacer(game_engine))
         for c in range(self._menu.grid_width):
-            self._menu.set_column_width(c, 200)
+            self._menu.set_column_width(c, 250)
         self._menu.set_center()
 
         self._action_choice_menu = self._add_component(components.Menu(game_engine, 2, 3, parent=self._menu))
@@ -351,7 +351,7 @@ class KeyboardSettingsScreen(Screen):
 
     def _on_reset(self, _=None):
         self._keybinds.reset()
-        for r, action_name in enumerate(config.InputConfig.ACTION_DEFAULTS):
+        for r, action_name in enumerate(config.InputConfig.ACTIONS):
             inputs = self._keybinds.get_keys(action_name)
             for c in range(self._menu.grid_width):
                 self._menu.get_button(2 * r + 1, c).data = (action_name, inputs[c] if c < len(inputs) else None)

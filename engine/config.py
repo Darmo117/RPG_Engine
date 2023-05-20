@@ -41,17 +41,10 @@ def load_config(debug: bool = False) -> Config:
             return InputConfig.ACTION_DEFAULTS[action]
         return tuple(map(int, settings_parser.get(_SECTION_GAMEPLAY, action).split(',')))
 
-    input_config = InputConfig(
-        ok_interact_keys=parse_keys(InputConfig.ACTION_OK_INTERACT),
-        up_keys=parse_keys(InputConfig.ACTION_UP),
-        down_keys=parse_keys(InputConfig.ACTION_DOWN),
-        left_keys=parse_keys(InputConfig.ACTION_LEFT),
-        right_keys=parse_keys(InputConfig.ACTION_RIGHT),
-        dash_keys=parse_keys(InputConfig.ACTION_DASH),
-        cancel_menu_keys=parse_keys(InputConfig.ACTION_CANCEL_MENU),
-        page_up_keys=parse_keys(InputConfig.ACTION_PAGE_UP),
-        page_down_keys=parse_keys(InputConfig.ACTION_PAGE_DOWN),
-    )
+    input_config = InputConfig(**{
+        action_name: parse_keys(action_name)
+        for action_name in InputConfig.ACTIONS
+    })
 
     return Config(
         game_title=str(json_data['game_title']),
@@ -91,6 +84,18 @@ class InputConfig:
     ACTION_PAGE_UP = 'page_up'
     ACTION_PAGE_DOWN = 'page_down'
 
+    ACTIONS = (
+        ACTION_OK_INTERACT,
+        ACTION_UP,
+        ACTION_DOWN,
+        ACTION_LEFT,
+        ACTION_RIGHT,
+        ACTION_DASH,
+        ACTION_CANCEL_MENU,
+        ACTION_PAGE_UP,
+        ACTION_PAGE_DOWN,
+    )
+
     ACTION_DEFAULTS: dict[str, tuple[int, ...]] = {
         ACTION_OK_INTERACT: (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE,),
         ACTION_UP: (pygame.K_UP,),
@@ -103,29 +108,11 @@ class InputConfig:
         ACTION_PAGE_DOWN: (pygame.K_PAGEDOWN,),
     }
 
-    def __init__(
-            self,
-            ok_interact_keys: _typ.Sequence[int],
-            up_keys: _typ.Sequence[int],
-            down_keys: _typ.Sequence[int],
-            left_keys: _typ.Sequence[int],
-            right_keys: _typ.Sequence[int],
-            dash_keys: _typ.Sequence[int],
-            cancel_menu_keys: _typ.Sequence[int],
-            page_up_keys: _typ.Sequence[int],
-            page_down_keys: _typ.Sequence[int],
-    ):
+    def __init__(self, **actions_keys: _typ.Sequence[int]):
         self._logger = logging.getLogger(self.__class__.__qualname__)
-        self._keys: dict[str, list[int]] = {action: [-1] * self.MAX_KEYS for action in self.ACTION_DEFAULTS}
-        self._set_keys(self.ACTION_OK_INTERACT, ok_interact_keys)
-        self._set_keys(self.ACTION_UP, up_keys)
-        self._set_keys(self.ACTION_DOWN, down_keys)
-        self._set_keys(self.ACTION_LEFT, left_keys)
-        self._set_keys(self.ACTION_RIGHT, right_keys)
-        self._set_keys(self.ACTION_DASH, dash_keys)
-        self._set_keys(self.ACTION_CANCEL_MENU, cancel_menu_keys)
-        self._set_keys(self.ACTION_PAGE_UP, page_up_keys)
-        self._set_keys(self.ACTION_PAGE_DOWN, page_down_keys)
+        self._keys: dict[str, list[int]] = {action: [-1] * self.MAX_KEYS for action in self.ACTIONS}
+        for action_name in self.ACTIONS:
+            self._set_keys(action_name, actions_keys.get(action_name, []))
 
     def _set_keys(self, action: str, keys: _typ.Sequence[int]):
         self._keys[action] = [-1] * self.MAX_KEYS
@@ -155,21 +142,11 @@ class InputConfig:
             self._set_keys(action, keys)
 
     def update(self, config: InputConfig):
-        for action in self.ACTION_DEFAULTS:
+        for action in self.ACTIONS:
             self._set_keys(action, config.get_keys(action))
 
     def copy(self) -> InputConfig:
-        return InputConfig(
-            self._keys[self.ACTION_OK_INTERACT],
-            self._keys[self.ACTION_UP],
-            self._keys[self.ACTION_DOWN],
-            self._keys[self.ACTION_LEFT],
-            self._keys[self.ACTION_RIGHT],
-            self._keys[self.ACTION_DASH],
-            self._keys[self.ACTION_CANCEL_MENU],
-            self._keys[self.ACTION_PAGE_UP],
-            self._keys[self.ACTION_PAGE_DOWN],
-        )
+        return InputConfig(**self._keys)
 
     def __repr__(self):
         return f'InputConfig[{self._keys}]'
@@ -294,7 +271,7 @@ class Config:
         cp[_SECTION_SOUND][_OPTION_MFX_VOLUME] = str(self.music_effects_volume)
         cp[_SECTION_SOUND][_OPTION_SFX_VOLUME] = str(self.sound_effects_volume)
         cp[_SECTION_GAMEPLAY][_OPTION_ALWAYS_RUN] = str(self.always_run).lower()
-        for action in InputConfig.ACTION_DEFAULTS:
+        for action in InputConfig.ACTIONS:
             cp[_SECTION_GAMEPLAY][action] = ','.join(str(key) for key in self._input_config.get_keys(action))
         with constants.SETTINGS_FILE.open(mode='w', encoding='UTF-8') as f:
             cp.write(f)

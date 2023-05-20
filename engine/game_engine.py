@@ -142,7 +142,7 @@ class GameEngine:
                 if event.type == pygame.QUIT:
                     self._stop()
                     break
-                if self._config.debug and event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_F3 and self._config.debug:
                     self._show_debug_info = not self._show_debug_info
                 if self._update_scene and not self._scene_transition:
                     self._active_scene.on_input_event(event)
