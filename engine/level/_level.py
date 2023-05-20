@@ -134,7 +134,7 @@ class Level(scene.Scene):
         self._background_color = bg_color
         self._camera_pos = pygame.Vector2()
 
-        self._player = None
+        self._player: entities.PlayerEntity | None = None
         self._entities: set[entities.Entity] = set()
 
         self._title_label = _LevelNameLabel(
@@ -155,7 +155,7 @@ class Level(scene.Scene):
     def spawn_player(self, at: pygame.Vector2):
         if self._player:
             raise RuntimeError('player entity already exists')
-        self._player = entities.PlayerEntity('Character', self)
+        self._player = entities.PlayerEntity('Character', self, 1.5)
         self._player.position = at
         self._entities.add(self._player)
 
@@ -181,13 +181,21 @@ class Level(scene.Scene):
         self._title_label.update()
 
     def _poll_events(self):
+        dash_pressed = io.is_any_key_pressed(*self._get_keys(config.InputConfig.ACTION_DASH))
+        should_run = dash_pressed ^ self.game_engine.config.always_run
+        running = self._player.is_running
+        if should_run and not running:
+            self._player.is_running = True
+        elif not should_run and running:
+            self._player.is_running = False
+
         if io.is_any_key_pressed(*self._get_keys(config.InputConfig.ACTION_UP)):
             self._player.go_up()
-        elif io.is_any_key_pressed(*self._get_keys(config.InputConfig.ACTION_DOWN)):
+        if io.is_any_key_pressed(*self._get_keys(config.InputConfig.ACTION_DOWN)):
             self._player.go_down()
         if io.is_any_key_pressed(*self._get_keys(config.InputConfig.ACTION_LEFT)):
             self._player.go_left()
-        elif io.is_any_key_pressed(*self._get_keys(config.InputConfig.ACTION_RIGHT)):
+        if io.is_any_key_pressed(*self._get_keys(config.InputConfig.ACTION_RIGHT)):
             self._player.go_right()
 
     def _update_camera_position(self):

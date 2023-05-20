@@ -16,7 +16,7 @@ class Entity(abc.ABC):
         pygame.Vector2(0, -1),  # Up
     )
 
-    ANIMATION_COEF = 5
+    ANIMATION_COEF = 0.025
 
     def __init__(self, sprite_sheet: str, level, speed: float):
         """Create an entity.
@@ -34,7 +34,8 @@ class Entity(abc.ABC):
         self._queued_direction = None  # Helps reduce character stutter
         self._remaining_distance = 0
         self._direction = 0
-        self._speed = speed
+        self._speed = 0
+        self.speed = speed
         self._anim_frames = tm.get_sprite_frames(sprite_sheet)
 
         self._frames: list[list[pygame.Surface]] = []
@@ -80,14 +81,14 @@ class Entity(abc.ABC):
 
     @speed.setter
     def speed(self, value: float):
-        self._speed = max(min(value, 16), 1)
+        self._speed = max(min(value, 1), 0.001)
 
     def update(self):
         self._move()
         if self.is_moving():
             current_time = time.time()
             diff = current_time - self._animation_timer
-            if diff >= self.ANIMATION_COEF * self._speed:
+            if diff >= self.ANIMATION_COEF / self._speed:
                 self._animation_index = (self._animation_index + 1) % self._anim_frames
                 self._animation_timer = current_time
 
