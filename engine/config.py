@@ -16,8 +16,8 @@ _SECTION_GAMEPLAY = 'Gameplay'
 _OPTION_LANGUAGE = 'language'
 _OPTION_BGM_VOLUME = 'bgm_volume'
 _OPTION_BGS_VOLUME = 'bgs_volume'
+_OPTION_MFX_VOLUME = 'mfx_volume'
 _OPTION_SFX_VOLUME = 'sfx_volume'
-_OPTION_MASTER_VOLUME = 'master_volume'
 _OPTION_ALWAYS_RUN = 'always_run'
 
 
@@ -60,8 +60,8 @@ def load_config(debug: bool = False) -> Config:
         languages=languages,
         bgm_volume=settings_parser.getint(_SECTION_SOUND, _OPTION_BGM_VOLUME, fallback=100),
         bgs_volume=settings_parser.getint(_SECTION_SOUND, _OPTION_BGS_VOLUME, fallback=100),
+        mfx_volume=settings_parser.getint(_SECTION_SOUND, _OPTION_MFX_VOLUME, fallback=100),
         sfx_volume=settings_parser.getint(_SECTION_SOUND, _OPTION_SFX_VOLUME, fallback=100),
-        master_volume=settings_parser.getint(_SECTION_SOUND, _OPTION_MASTER_VOLUME, fallback=100),
         always_run=settings_parser.getboolean(_SECTION_GAMEPLAY, _OPTION_ALWAYS_RUN, fallback=False),
         input_config=input_config,
         selected_language=settings_parser.get(
@@ -186,8 +186,8 @@ class Config:
             languages: _typ.Iterable[i18n.Language],
             bgm_volume: int,
             bgs_volume: int,
+            mfx_volume: int,
             sfx_volume: int,
-            master_volume: int,
             always_run: bool,
             input_config: InputConfig,
             selected_language: str = None,
@@ -202,13 +202,13 @@ class Config:
         # Define sound-related fields
         self._bgm_volume = 0
         self._bgs_volume = 0
+        self._mfx_volume = 0
         self._sfx_volume = 0
-        self._master_volume = 0
         # Assign to them through property setter
         self.bg_music_volume = bgm_volume
         self.bg_sounds_volume = bgs_volume
+        self.music_effects_volume = mfx_volume
         self.sound_effects_volume = sfx_volume
-        self.master_volume = master_volume
 
         self.always_run = always_run
         self._input_config = input_config
@@ -252,12 +252,12 @@ class Config:
         self._sfx_volume = maths.clamp(value, 0, 100)
 
     @property
-    def master_volume(self) -> int:
-        return self._master_volume
+    def music_effects_volume(self) -> int:
+        return self._mfx_volume
 
-    @master_volume.setter
-    def master_volume(self, value: int):
-        self._master_volume = maths.clamp(value, 0, 100)
+    @music_effects_volume.setter
+    def music_effects_volume(self, value: int):
+        self._mfx_volume = maths.clamp(value, 0, 100)
 
     @property
     def game_title(self) -> str:
@@ -291,8 +291,8 @@ class Config:
             cp[_SECTION_UI][_OPTION_LANGUAGE] = self._active_language.code
         cp[_SECTION_SOUND][_OPTION_BGM_VOLUME] = str(self.bg_music_volume)
         cp[_SECTION_SOUND][_OPTION_BGS_VOLUME] = str(self.bg_sounds_volume)
+        cp[_SECTION_SOUND][_OPTION_MFX_VOLUME] = str(self.music_effects_volume)
         cp[_SECTION_SOUND][_OPTION_SFX_VOLUME] = str(self.sound_effects_volume)
-        cp[_SECTION_SOUND][_OPTION_MASTER_VOLUME] = str(self.master_volume)
         cp[_SECTION_GAMEPLAY][_OPTION_ALWAYS_RUN] = str(self.always_run).lower()
         for action in InputConfig.ACTION_DEFAULTS:
             cp[_SECTION_GAMEPLAY][action] = ','.join(str(key) for key in self._input_config.get_keys(action))
@@ -303,7 +303,7 @@ class Config:
     def __repr__(self):
         return (f'Config[game_title={self.game_title},font={self.font},active_language={self.active_language},'
                 f'bgm_volume={self.bg_music_volume},bgs_volume={self.bg_sounds_volume},'
-                f'sfx_volume={self.sound_effects_volume},master_volume={self.master_volume},'
+                f'mfx_volume={self.music_effects_volume},sfx_volume={self.sound_effects_volume},'
                 f'always_run={self.always_run},inputs={self._input_config},'
                 f'languages=[{",".join(map(str, self._languages.values()))}]')
 

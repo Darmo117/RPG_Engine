@@ -191,8 +191,8 @@ Language: {self.config.active_language}
 Always run: {self.config.always_run}
 BGM: {self.config.bg_music_volume}
 BGS: {self.config.bg_sounds_volume}
-SE: {self.config.sound_effects_volume}
-MV: {self.config.master_volume}
+MFX: {self.config.music_effects_volume}
+SFX: {self.config.sound_effects_volume}
 Scene type: {type(self._active_scene).__qualname__}
 """.strip()
         if isinstance(self._active_scene, level.Level):

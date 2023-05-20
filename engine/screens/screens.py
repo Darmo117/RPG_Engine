@@ -199,7 +199,7 @@ class SettingsScreen(Screen):
             self._config.sound_effects_volume, self._on_menu_volume))
         menu.add_item(components.Button(
             ge, lang.translate(f'screen.settings.menu.master_volume'), 'master_volume', percent_format,
-            self._config.master_volume, self._on_master_volume))
+            self._config.music_effects_volume, self._on_master_volume))
         w, h = self._game_engine.window_size
         menu.x = (w - menu.size[0]) / 2
         menu.y = 2 * (h - menu.size[1]) / 3
@@ -238,9 +238,9 @@ class SettingsScreen(Screen):
         button.data = self._config.sound_effects_volume
 
     def _on_master_volume(self, button: components.Button):
-        self._config.master_volume = self._cycle_sound(self._config.master_volume)
+        self._config.music_effects_volume = self._cycle_sound(self._config.music_effects_volume)
         self._config.save()
-        button.data = self._config.master_volume
+        button.data = self._config.music_effects_volume
 
     def _cycle_sound(self, volume: int) -> int:
         return (volume + self.VOLUME_STEP) % (config.Config.MAX_VOLUME + self.VOLUME_STEP)
