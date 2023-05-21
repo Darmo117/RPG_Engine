@@ -84,7 +84,7 @@ class GameState:
         buffer.write_int(len(self._flags), signed=False)
         for flag_name, flag_value in self._flags.items():
             buffer.write_string(flag_name)
-            match type(flag_value):
+            match flag_value:
                 case bool(b):
                     buffer.write_bool(b)
                 case int(i):
