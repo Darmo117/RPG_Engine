@@ -1,5 +1,7 @@
 import dataclasses
 
+from .. import io
+
 
 @dataclasses.dataclass(frozen=True)
 class Item:
@@ -76,8 +78,9 @@ class ItemStack:
 class PlayerInventory:
     """Holds the items of the player character."""
 
-    def __init__(self):
+    def __init__(self, buffer: io.ByteBuffer = None):
         self._items: dict[str, set[ItemStack]] = {t: set() for t in Item.TYPES}
+        # TODO load from buffer
 
     def add_item(self, item_stack: ItemStack):
         if item_stack.is_empty:
@@ -104,3 +107,6 @@ class PlayerInventory:
                 if stack.is_empty:
                     stacks.remove(stack)
                 break
+
+    def save(self, buffer: io.ByteBuffer):
+        pass  # TODO
